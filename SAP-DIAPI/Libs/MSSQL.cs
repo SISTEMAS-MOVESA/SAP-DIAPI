@@ -16,7 +16,7 @@ namespace IntegracionesSAP.Libs
             Server = "192.168.1.3", DataBase = "MOVESA_TSET", UserName = "sa", Password = "M*l!n3r0s2k12"
         };
 
-        public static DBConnection DB_DEFAULT = MSSQL.DB_MOVESA_TEST;
+        public static DBConnection DB_DEFAULT = MSSQL.DB_MOVESA;
 
         public static T ExecuteScalar<T>(DBConnection db, string query, Dictionary<string, object>? parameters)
         {
