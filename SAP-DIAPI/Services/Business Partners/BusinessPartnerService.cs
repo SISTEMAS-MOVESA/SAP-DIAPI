@@ -191,6 +191,21 @@ namespace IntegracionesSAP.Services.Business_Partners
             return CardCode;
         }
 
+        public string GetCLByAddId(string addId, int groupCode)
+        {
+            string cardCode = MSSQL.ExecuteScalar<string>(
+                MSSQL.DB_DEFAULT,
+                "SELECT MAX(CardCode) FROM OCRD WHERE AddID = @AddID AND GroupCode = @GroupCode",
+                new Dictionary<string, object>
+                {
+                    { "@AddID", addId },
+                    { "@GroupCode", groupCode }
+                }
+            );
+
+            return cardCode;
+        }
+
         /// <returns>
         /// retorna un objeto con: { CardCode, RefId, AddId, UnifiedFederalTaxID, CardName, Phone, Address, City, StateId, State, Country, BirthDate, Gender }
         /// </returns>
@@ -221,5 +236,7 @@ namespace IntegracionesSAP.Services.Business_Partners
 
             return data;
         }
+    
+        
     }
 }

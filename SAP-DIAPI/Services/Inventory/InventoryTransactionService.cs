@@ -26,7 +26,7 @@ namespace IntegracionesSAP.Services.Inventory
             }
             catch (Exception ex)
             {
-                return response.Error(500, ex.Message, ex);
+                return response.Error(500, ex.Message);
             }
         }
 
@@ -40,7 +40,7 @@ namespace IntegracionesSAP.Services.Inventory
             }
             catch (Exception ex)
             {
-                return response.Error(500, ex.Message, ex);
+                return response.Error(500, ex.Message);
             }
         }
 
@@ -85,7 +85,7 @@ namespace IntegracionesSAP.Services.Inventory
                     if (!string.IsNullOrEmpty(item.SerialNumber))
                     {
                         SAPobj.Lines.UserFields.Fields.Item("U_MSERIE").Value = item.SerialNumber;
-                        SAPobj.Lines.SerialNumber = item.SerialNumber;
+                        //SAPobj.Lines.SerialNumber = item.SerialNumber;
 
                         if (item.SysSerial != null)
                         {
@@ -109,7 +109,8 @@ namespace IntegracionesSAP.Services.Inventory
                 int docEntry = int.Parse(_company.GetNewObjectKey());
 
                 return response.Ok(new SAPObjResult {
-                    DocEntry = docEntry, DocType = BoObjectTypes.oInventoryTransferRequest 
+                    DocEntry = docEntry, DocNum = SAPConnection.GetObjDocNum("OWTQ", docEntry),
+                    DocType = BoObjectTypes.oInventoryTransferRequest
                 });
             }
             catch (Exception ex)
@@ -174,7 +175,7 @@ namespace IntegracionesSAP.Services.Inventory
                         if (!string.IsNullOrEmpty(item.SerialNumber))
                         {
                             SAPobj.Lines.UserFields.Fields.Item("U_MSERIE").Value = item.SerialNumber;
-                            SAPobj.Lines.SerialNumber = item.SerialNumber;
+                            //SAPobj.Lines.SerialNumber = item.SerialNumber;
 
                             if (item.SysSerial != null)
                             {
@@ -198,7 +199,8 @@ namespace IntegracionesSAP.Services.Inventory
 
                 int docEntry = int.Parse(_company.GetNewObjectKey());
                 return response.Ok(new SAPObjResult {
-                    DocEntry = docEntry, DocType = BoObjectTypes.oStockTransfer
+                    DocEntry = docEntry, DocNum = SAPConnection.GetObjDocNum("OWTR", docEntry),
+                    DocType = BoObjectTypes.oStockTransfer
                 });
             }
             catch (Exception ex)
@@ -229,7 +231,7 @@ namespace IntegracionesSAP.Services.Inventory
                 if (!OWTQ.Success)
                     throw new Exception(OWTQ.Message);
 
-                int requestEntry = ((SAPObjResult)OWTQ.Data).DocEntry ?? 0;
+                SAPObjResult requestData = (SAPObjResult)OWTQ.Data;
 
                 // -------- preparar transferencia
 
@@ -249,7 +251,7 @@ namespace IntegracionesSAP.Services.Inventory
                 {
                     transfer.Lines.Add(new WTR1()
                     {
-                        BaseEntry = requestEntry,
+                        BaseEntry = requestData.DocEntry,
                         BaseType = (int)InvBaseDocTypeEnum.InventoryTransferRequest,
                         BaseLine = BaseLine,
 
@@ -267,18 +269,14 @@ namespace IntegracionesSAP.Services.Inventory
                 if (!OWTR.Success)
                     throw new Exception(OWTR.Message);
 
-                int transferEntry = ((SAPObjResult)OWTR.Data).DocEntry ?? 0;
+                SAPObjResult transferData = (SAPObjResult)OWTR.Data;
 
                 // -------- commit
 
                 _company.EndTransaction(BoWfTransOpt.wf_Commit);
 
                 return response.Ok(
-                    new
-                    {
-                        OWTQ = new SAPObjResult() { DocEntry = requestEntry, DocType = BoObjectTypes.oInventoryTransferRequest },
-                        OWTR = new SAPObjResult() { DocEntry = transferEntry, DocType = BoObjectTypes.oStockTransfer },
-                    }
+                    new { OWTQ = requestData, OWTR = transferData }
                 );
             }
             catch (Exception ex)

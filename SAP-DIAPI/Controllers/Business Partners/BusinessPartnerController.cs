@@ -48,7 +48,10 @@ namespace IntegracionesSAP.Controllers
                     return Ok(response.Error(500, "El campo [AdditionalID] es obligatorio."));
 
                 if (service.ExistsAdditionalId(obj.AdditionalID, GrpCodeMOVESA))
-                    return Ok(response.Error(500, $"Ya existe un cliente con el DNI [{obj.AdditionalID}]"));
+                {
+                    string cardcode = service.GetCLByAddId(obj.AdditionalID, GrpCodeMOVESA);
+                    return Ok(response.Error(500, $"Ya existe un cliente con el DNI [{obj.AdditionalID}] - {cardcode}", cardcode));
+                }
 
                 // validar direcciones
                 if (obj.Addresses == null || obj.Addresses.Count == 0)
@@ -71,6 +74,7 @@ namespace IntegracionesSAP.Controllers
                 obj.UserFields ??= new List<UserField>();
                 obj.UserFields.Add(new UserField() { Key = "U_Canal", Value = "01" });
                 obj.UserFields.Add(new UserField() { Key = "U_Empresa", Value = "1" });
+                obj.UserFields.Add(new UserField() { Key = "U_Enviar_odoo", Value = "SI" });
 
                 obj.Properties ??= new List<SapProperty>();
                 obj.Properties.Add(new SapProperty() { Property = 13, Value = BoYesNoEnum.tYES });
@@ -137,6 +141,7 @@ namespace IntegracionesSAP.Controllers
                 obj.UserFields.Add(new UserField() { Key = "U_Empresa", Value = "2" });
                 obj.UserFields.Add(new UserField() { Key = "U_FechaNacimiento", Value = data["BirthDate"].ToString() });
                 obj.UserFields.Add(new UserField() { Key = "U_Genero", Value = data["Gender"].ToString() });
+                obj.UserFields.Add(new UserField() { Key = "U_Enviar_odoo", Value = "SI" });
 
                 obj.Addresses.Add(new CRD1()
                 {

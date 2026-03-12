@@ -109,5 +109,19 @@ namespace IntegracionesSAP.Libs
                 }
             }
         }
+    
+        public static int GetObjDocNum(string Table, int DocEntry)
+        {
+            int DocNum = MSSQL.ExecuteScalar<int>(
+                MSSQL.DB_DEFAULT,
+                $"SELECT ISNULL(MAX(DocNum),0) FROM [{Table}] WHERE DocEntry = @DocEntry",
+                new Dictionary<string, object>
+                {
+                    { "@DocEntry", DocEntry }
+                }
+            );
+
+            return DocNum;
+        }
     }
 }
