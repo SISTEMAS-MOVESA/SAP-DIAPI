@@ -4,7 +4,7 @@ using IntegracionesSAP;
 namespace IntegracionesSAP.Controllers
 {
     [ApiController]
-    [Route("test/[controller]")]
+    [Route("v1/[controller]")]
     public class ReserveInvoiceController : ControllerBase
     {
         /// <summary>

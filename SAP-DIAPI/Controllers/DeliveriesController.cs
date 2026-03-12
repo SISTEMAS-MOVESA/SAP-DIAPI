@@ -5,7 +5,7 @@ using SAPbobsCOM;
 namespace IntegracionesSAP.Controllers
 {
     [ApiController]
-    [Route("test/[controller]")]
+    [Route("v1/[controller]")]
     public class DeliveriesController : ControllerBase
     {
         /// <summary>

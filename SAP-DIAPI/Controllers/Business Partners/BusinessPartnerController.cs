@@ -14,7 +14,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 namespace IntegracionesSAP.Controllers
 {
     [ApiController]
-    [Route("test/BusinessPartner")]
+    [Route("v1/BusinessPartner")]
     public class BusinessPartnerController : ControllerBase
     {
         private readonly BusinessPartnerService service;

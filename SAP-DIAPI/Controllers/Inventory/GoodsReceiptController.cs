@@ -3,7 +3,7 @@
 namespace IntegracionesSAP.Controllers.Inventory
 {
     [ApiController]
-    [Route("test/GoodsReceipt")]
+    [Route("v1/GoodsReceipt")]
     public class GoodsReceiptController : ControllerBase
     {
         private readonly IConfiguration _configuration;

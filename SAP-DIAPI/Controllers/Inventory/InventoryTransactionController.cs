@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace IntegracionesSAP.Controllers.Inventory
 {
-    [Route("test/InventoryTransaction")]
+    [Route("v1/InventoryTransaction")]
     [ApiController]
     public class InventoryTransactionController : ControllerBase
     {
