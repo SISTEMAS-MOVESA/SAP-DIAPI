@@ -1,0 +1,64 @@
+@IntegracionesSAP_HostAddress = http://localhost/IntegracionesSAP
+@apiBp=http://192.168.112.93/IntegracionesSAP/api/BusinessPartner/create
+
+### Probar conversión de Orden a Entrega
+POST {{IntegracionesSAP_HostAddress}}/api/Deliveries/ConvertOrderToDelivery
+Content-Type: application/json
+Accept: application/json
+
+{
+  "DocEntry": 12345,
+  "DocSeries": 25
+}
+
+###
+POST {{apiBp}}
+Content-Type: application/json
+Accept: application/json
+{
+  "CardCode": "CL134490",
+  "CardName": "ROGER JOVEL MARCIA",
+  "CardForeignName": "0501198101721",
+  "Currency": "LPS",
+  "GroupCode": 106,
+  "FederalTaxID": "000000000000",
+  "AdditionalID": "0501198101721",
+  "UnifiedFederalTaxID": "0501198101721",
+  "Phone1": "(+504)32026634",
+  "Phone2": "(+504)32026634",
+  "Cellular": "(+504)32026634",
+  "EmailAddress": "rjovel@gmail.com",
+  "Notes": "HEBER LEONEL PALMA MONDRAGON - 11/29/2025 6:19:18 PM",
+  "SalesPersonCode": 4,
+  "Canal": "01",
+  "PayTermsGrpCode": 48,
+  "PriceListNum": 1,
+  "Propiedad13": true,
+  "Empresa": "1",
+  "BillTo": {
+    "AddressName": "BILL TO",
+    "Street": "2 CALLE 2 AVE",
+    "StreetNo": "1981-06-09",
+    "GlobalLocationNumber": "Masculino",
+    "Block": "RESIDENCIAL VILLA VALENCIA",
+    "City": "Arizona",
+    "County": "Atlántida",
+    "State": "D04",
+    "Country": "HN",
+    "AddressName3": "F1-4",
+    "TaxCode": null
+  },
+  "ShipTo": {
+    "AddressName": "SHIP TO",
+    "Street": "2 CALLE 2 AVE",
+    "StreetNo": "1981-06-09",
+    "GlobalLocationNumber": "Masculino",
+    "Block": "RESIDENCIAL VILLA VALENCIA",
+    "City": "Arizona",
+    "County": "Atlántida",
+    "State": "D04",
+    "Country": "HN",
+    "AddressName3": "F1-4",
+    "TaxCode": "ISV"
+  }
+}
