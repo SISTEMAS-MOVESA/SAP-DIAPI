@@ -32,12 +32,23 @@ namespace IntegracionesSAP.Controllers.Inventory
                 if (document.Lines == null || !document.Lines.Any())
                     return Ok(response.Error(400, "El documento no contiene lineas"));
 
+                int LineNum = 0;
+                foreach (var item in document.Lines)
+                {
+                    item.LineNum = LineNum;
+                    LineNum++;
+                }
+
                 response = service.Connect();
                 if (!response.Success) return Ok(response);
 
                 try
                 {
                     response = service.CreateTransferRequest(document);
+                    if (response.Success && response.Data is SAPObjResult result)
+                    {
+                        result.DocNum = SAPConnection.GetObjDocNum("OWTQ", result.DocEntry ?? 0);
+                    }
                 }
                 finally
                 {
@@ -64,12 +75,23 @@ namespace IntegracionesSAP.Controllers.Inventory
                 if (document.Lines == null || !document.Lines.Any())
                     return Ok(response.Error(400, "El documento no contiene lineas"));
 
+                int LineNum = 0;
+                foreach (var item in document.Lines)
+                {
+                    item.LineNum = LineNum;
+                    LineNum++;
+                }
+
                 response = service.Connect();
                 if (!response.Success) return Ok(response);
 
                 try
                 {
                     response = service.CreateStockTransfer(document);
+                    if (response.Success && response.Data is SAPObjResult result)
+                    {
+                        result.DocNum = SAPConnection.GetObjDocNum("OWTR", result.DocEntry ?? 0);
+                    }
                 }
                 finally
                 {

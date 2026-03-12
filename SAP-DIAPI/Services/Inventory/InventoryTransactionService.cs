@@ -109,8 +109,7 @@ namespace IntegracionesSAP.Services.Inventory
                 int docEntry = int.Parse(_company.GetNewObjectKey());
 
                 return response.Ok(new SAPObjResult {
-                    DocEntry = docEntry, DocNum = SAPConnection.GetObjDocNum("OWTQ", docEntry),
-                    DocType = BoObjectTypes.oInventoryTransferRequest
+                    DocEntry = docEntry, DocType = BoObjectTypes.oInventoryTransferRequest
                 });
             }
             catch (Exception ex)
@@ -171,17 +170,17 @@ namespace IntegracionesSAP.Services.Inventory
                     {
                         SAPobj.Lines.ItemCode = item.ItemCode;
                         SAPobj.Lines.Quantity = item.Quantity;
+                    }
 
-                        if (!string.IsNullOrEmpty(item.SerialNumber))
+                    if (!string.IsNullOrEmpty(item.SerialNumber))
+                    {
+                        SAPobj.Lines.UserFields.Fields.Item("U_MSERIE").Value = item.SerialNumber;
+                        //SAPobj.Lines.SerialNumber = item.SerialNumber;
+
+                        if (item.SysSerial != null)
                         {
-                            SAPobj.Lines.UserFields.Fields.Item("U_MSERIE").Value = item.SerialNumber;
-                            //SAPobj.Lines.SerialNumber = item.SerialNumber;
-
-                            if (item.SysSerial != null)
-                            {
-                                SAPobj.Lines.SerialNumbers.SystemSerialNumber = (int)item.SysSerial;
-                                SAPobj.Lines.SerialNumbers.Add();
-                            }
+                            SAPobj.Lines.SerialNumbers.SystemSerialNumber = (int)item.SysSerial;
+                            SAPobj.Lines.SerialNumbers.Add();
                         }
                     }
 
@@ -199,8 +198,7 @@ namespace IntegracionesSAP.Services.Inventory
 
                 int docEntry = int.Parse(_company.GetNewObjectKey());
                 return response.Ok(new SAPObjResult {
-                    DocEntry = docEntry, DocNum = SAPConnection.GetObjDocNum("OWTR", docEntry),
-                    DocType = BoObjectTypes.oStockTransfer
+                    DocEntry = docEntry, DocType = BoObjectTypes.oStockTransfer
                 });
             }
             catch (Exception ex)
@@ -246,20 +244,21 @@ namespace IntegracionesSAP.Services.Inventory
                     PriceList = request.PriceList
                 };
 
-                int BaseLine = 0;
+                int LineNum = 0;
                 foreach (var item in request.Lines)
                 {
                     transfer.Lines.Add(new WTR1()
                     {
+                        LineNum = LineNum,
                         BaseEntry = requestData.DocEntry,
                         BaseType = (int)InvBaseDocTypeEnum.InventoryTransferRequest,
-                        BaseLine = BaseLine,
+                        BaseLine = item.LineNum,
 
                         Quantity = item.Quantity,
                         SysSerial = item.SysSerial,
                         SerialNumber = item.SerialNumber,
                     });
-                    BaseLine++;
+                    LineNum++;
                 }
 
                 // -------- crear transferencia
@@ -274,6 +273,9 @@ namespace IntegracionesSAP.Services.Inventory
                 // -------- commit
 
                 _company.EndTransaction(BoWfTransOpt.wf_Commit);
+
+                requestData.DocNum = SAPConnection.GetObjDocNum("OWTQ", requestData.DocEntry ?? 0);
+                transferData.DocNum = SAPConnection.GetObjDocNum("OWTR", transferData.DocEntry ?? 0);
 
                 return response.Ok(
                     new { OWTQ = requestData, OWTR = transferData }
