@@ -58,7 +58,7 @@ namespace IntegracionesSAP.Libs
         
         public static Company GetDefaultCOM()
         {
-            return SAPConnection.GetMovesaTestCOM();
+            return SAPConnection.GetMovesaCOM();
         }
         
         public static void Connect()
