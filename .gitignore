@@ -361,3 +361,7 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# .bat para subir a servidor 192.168.1.6
+SAP-DIAPI-MOVESA.bat
+SAP-DIAPI-TEST.bat

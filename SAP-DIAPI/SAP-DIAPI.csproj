@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <PlatformTarget>x86</PlatformTarget>
+    <AssemblyName>$(MSBuildProjectName)</AssemblyName>
+    <RootNamespace>IntegracionesSAP</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
