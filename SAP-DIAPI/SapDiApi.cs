@@ -246,11 +246,13 @@ namespace IntegracionesSAP
             ReserveInvoice.CardName = reserva.CardName?.Length > 100 ? reserva.CardName.Substring(0, 100) : reserva.CardName;
             ReserveInvoice.Series = reserva.Series;
             ReserveInvoice.DocDate = reserva.DocDate;
+            ReserveInvoice.DocDueDate= reserva.DocDate;
             ReserveInvoice.Reference2 = reserva.Reference2 ?? "FRPP";
             ReserveInvoice.Comments = reserva.Comments ?? $"Usuario API";
             ReserveInvoice.NumAtCard = reserva.NumAtCard;
             ReserveInvoice.SalesPersonCode = reserva.SalesPersonCode;
             ReserveInvoice.GroupNumber = reserva.GroupNumber;
+            ReserveInvoice.PaymentGroupCode = reserva.GroupNumber;
 
             // LINES
             foreach (var line in reserva.Lines)
