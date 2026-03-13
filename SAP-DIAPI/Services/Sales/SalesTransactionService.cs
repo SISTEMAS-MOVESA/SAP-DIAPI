@@ -120,5 +120,183 @@ namespace IntegracionesSAP.Services.Sales
             }
         }
 
+        public ApiResponse CreateDelivery(ODLN obj)
+        {
+            ApiResponse response = new ApiResponse();
+            Documents SAPobj = null;
+
+            try
+            {
+                SAPobj = (Documents)_company.GetBusinessObject(BoObjectTypes.oDeliveryNotes);
+
+                SAPobj.CardCode = obj.CardCode;
+                SAPobj.DocDate = DateTime.Now;
+                SAPobj.TaxDate = DateTime.Now;
+                SAPobj.Series = obj.Series;
+                SAPobj.Comments = obj.Comments;
+                SAPobj.SalesPersonCode = obj.SalesPersonCode;
+
+                if (obj.UserFields != null)
+                {
+                    foreach (var UF in obj.UserFields)
+                    {
+                        try
+                        {
+                            SAPobj.UserFields.Fields.Item(UF.Key).Value = UF.Value;
+                        }
+                        catch { }
+                    }
+                }
+
+                int LineNum = 0;
+                foreach (var item in obj.Lines)
+                {
+                    SAPobj.Lines.SetCurrentLine(LineNum);
+
+                    if (item.BaseEntry != null)
+                    {
+                        SAPobj.Lines.BaseEntry = (int)item.BaseEntry;
+                        SAPobj.Lines.BaseLine = (int)item.BaseLine;
+                        SAPobj.Lines.BaseType = (int)BoObjectTypes.oOrders;
+                        SAPobj.Lines.Quantity = item.Quantity;
+                    }
+                    else
+                    {
+                        SAPobj.Lines.ItemCode = item.ItemCode;
+                        SAPobj.Lines.Quantity = item.Quantity;
+                        SAPobj.Lines.Price = item.Price;
+                    }
+
+                    if (!string.IsNullOrEmpty(item.SerialNumber))
+                    {
+                        SAPobj.Lines.UserFields.Fields.Item("U_MSERIE").Value = item.SerialNumber;
+
+                        if (item.SysSerial != null)
+                        {
+                            SAPobj.Lines.SerialNumbers.SystemSerialNumber = (int)item.SysSerial;
+                            SAPobj.Lines.SerialNumbers.Add();
+                        }
+                    }
+
+                    SAPobj.Lines.Add();
+                    LineNum++;
+                }
+
+                int ret = SAPobj.Add();
+
+                if (ret != 0)
+                {
+                    _company.GetLastError(out int errCode, out string errMsg);
+                    return response.Error(500, $"Error SAP ODLN: {errCode} - {errMsg}");
+                }
+
+                int docEntry = int.Parse(_company.GetNewObjectKey());
+
+                return response.Ok(new SAPObjResult
+                {
+                    DocEntry = docEntry,
+                    DocType = BoObjectTypes.oDeliveryNotes
+                });
+            }
+            catch (Exception ex)
+            {
+                return response.Error(500, $"Error SAP ODLN: {ex.Message}");
+            }
+            finally
+            {
+                if (SAPobj != null)
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(SAPobj);
+            }
+        }
+
+        public ApiResponse CreateInvoice(OINV obj)
+        {
+            ApiResponse response = new ApiResponse();
+            Documents SAPobj = null;
+
+            try
+            {
+                SAPobj = (Documents)_company.GetBusinessObject(BoObjectTypes.oInvoices);
+
+                SAPobj.CardCode = obj.CardCode;
+                SAPobj.DocDate = DateTime.Now;
+                SAPobj.TaxDate = DateTime.Now;
+                SAPobj.Series = obj.Series;
+                SAPobj.Comments = obj.Comments;
+                SAPobj.SalesPersonCode = obj.SalesPersonCode;
+
+                if (obj.UserFields != null)
+                {
+                    foreach (var UF in obj.UserFields)
+                    {
+                        try
+                        {
+                            SAPobj.UserFields.Fields.Item(UF.Key).Value = UF.Value;
+                        }
+                        catch { }
+                    }
+                }
+
+                int LineNum = 0;
+                foreach (var item in obj.Lines)
+                {
+                    SAPobj.Lines.SetCurrentLine(LineNum);
+
+                    if (item.BaseEntry != null)
+                    {
+                        SAPobj.Lines.BaseEntry = (int)item.BaseEntry;
+                        SAPobj.Lines.BaseLine = (int)item.BaseLine;
+                        SAPobj.Lines.BaseType = (int)BoObjectTypes.oDeliveryNotes;
+                        SAPobj.Lines.Quantity = item.Quantity;
+                    }
+                    else
+                    {
+                        SAPobj.Lines.ItemCode = item.ItemCode;
+                        SAPobj.Lines.Quantity = item.Quantity;
+                        SAPobj.Lines.Price = item.Price;
+                    }
+
+                    if (!string.IsNullOrEmpty(item.SerialNumber))
+                    {
+                        SAPobj.Lines.UserFields.Fields.Item("U_MSERIE").Value = item.SerialNumber;
+
+                        if (item.SysSerial != null)
+                        {
+                            SAPobj.Lines.SerialNumbers.SystemSerialNumber = (int)item.SysSerial;
+                            SAPobj.Lines.SerialNumbers.Add();
+                        }
+                    }
+
+                    SAPobj.Lines.Add();
+                    LineNum++;
+                }
+
+                int ret = SAPobj.Add();
+
+                if (ret != 0)
+                {
+                    _company.GetLastError(out int errCode, out string errMsg);
+                    return response.Error(500, $"Error SAP OINV: {errCode} - {errMsg}");
+                }
+
+                int docEntry = int.Parse(_company.GetNewObjectKey());
+
+                return response.Ok(new SAPObjResult
+                {
+                    DocEntry = docEntry,
+                    DocType = BoObjectTypes.oInvoices
+                });
+            }
+            catch (Exception ex)
+            {
+                return response.Error(500, $"Error SAP OINV: {ex.Message}");
+            }
+            finally
+            {
+                if (SAPobj != null)
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(SAPobj);
+            }
+        }
+
     }
 }
