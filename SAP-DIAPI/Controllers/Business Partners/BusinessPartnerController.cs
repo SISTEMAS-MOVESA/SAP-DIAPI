@@ -189,6 +189,39 @@ namespace IntegracionesSAP.Controllers
             }
         }
 
+        [HttpPost("activateCustomer")]
+        public IActionResult ActivateCustomer([FromBody] OCRD obj)
+        {
+            ApiResponse response = new ApiResponse();
+            try
+            {
+                if (obj == null)
+                    return Ok(response.Error(400, $"Informacion invalida o vacia"));
+
+                if (!service.ExistsCardCode(obj.CardCode))
+                    return Ok(response.Error(500, $"no existe el cliente [{obj.CardCode}] en SAP"));
+
+                obj.FrozenFrom = DateTime.Now.AddDays(2);
+
+                response = service.Connect();
+                if (!response.Success) return Ok(response);
+
+                try
+                {
+                    response = service.ActivateCustomer(obj);
+                }
+                finally
+                {
+                    service.Disconnect();
+                }
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return Ok(response.Error(500, ex.Message));
+            }
+        }
+
         [HttpGet("NextCL")]
         public IActionResult NextCL()
         {
