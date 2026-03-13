@@ -153,6 +153,46 @@ namespace IntegracionesSAP.Services.Business_Partners
             }
         }
 
+        public ApiResponse ActivateCustomer(OCRD obj)
+        {
+            ApiResponse response = new ApiResponse();
+            BusinessPartners SAPobj = null;
+
+            try
+            {
+                SAPobj = (BusinessPartners)_company.GetBusinessObject(BoObjectTypes.oBusinessPartners);
+
+                if (!SAPobj.GetByKey(obj.CardCode))
+                    return response.Error(404, $"Cliente [{obj.CardCode}] no existe");
+
+                SAPobj.SalesPersonCode = obj.SalesPersonCode;
+
+                SAPobj.Valid = BoYesNoEnum.tNO;
+                SAPobj.Frozen = BoYesNoEnum.tYES;
+                SAPobj.FrozenFrom = obj.FrozenFrom ?? DateTime.Now.AddDays(2);
+
+                int ret = SAPobj.Update();
+
+                if (ret != 0)
+                {
+                    _company.GetLastError(out int errCode, out string errMsg);
+                    return response.Error(500, $"Error SAP OCRD: {errCode} - {errMsg}");
+                }
+
+                return response.Ok(obj.CardCode, "Cliente activado correctamente");
+            }
+            catch (Exception ex)
+            {
+                return response.Error(500, ex.Message);
+            }
+            finally
+            {
+                if (SAPobj != null)
+                    Marshal.ReleaseComObject(SAPobj);
+            }
+        }
+
+        // --------------- helpers ---------------
         public bool ExistsAdditionalId(string addId, int groupCode)
         {
             int exists = MSSQL.ExecuteScalar<int>(
