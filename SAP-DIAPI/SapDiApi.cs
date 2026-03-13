@@ -11,6 +11,7 @@ namespace IntegracionesSAP
         /// </summary>
         public static void ConnectVehico()
         {
+
             if (_company != null && _company.Connected)
                 return;
 
