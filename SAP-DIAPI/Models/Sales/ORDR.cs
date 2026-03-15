@@ -3,10 +3,17 @@ namespace IntegracionesSAP.Models.Sales
 {
     public class ORDR
     {
-        public string CardCode { get; set; }
-        public string Comments { get; set; }
-        public int Series { get; set; }
-        public int SalesPersonCode { get; set; }
+        public int? DocEntry { get; set; }
+        public int? DocNum { get; set; }
+        public DateTime DocDueDate { get; set; } = DateTime.Now;
+        public double? DocTotal { get; set; }
+        public string? CardCode { get; set; }
+        public string? CardName { get; set; }
+        public string? Comments { get; set; }
+        public int Series { get; set; } = 0;
+        public int TargetSeries { get; set; } = 0;
+        public int TargetSeries2 { get; set; } = 0;
+        public int SalesPersonCode { get; set; } = -1;
 
         public List<UserField> UserFields { get; set; } = new();
         public List<RDR1> Lines { get; set; } = new();

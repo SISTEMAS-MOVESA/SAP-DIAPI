@@ -3,8 +3,8 @@
     public class OINV
     {
         public string? CardCode { get; set; }
-
-        public int? Series { get; set; }
+        public string? CardName { get; set; }
+        public int Series { get; set; } = 0;
 
         public string? Comments { get; set; }
 
