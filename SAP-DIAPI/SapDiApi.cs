@@ -193,17 +193,19 @@ namespace IntegracionesSAP
             salesOrder.Comments = salesOrder.Comments + " #" + order.Comments;
             salesOrder.Reference2 = "APIREST";
 
+
+            int i = 0;
             // Actualizar precios de líneas enviadas
             foreach (var lineUpdate in order.Lines)
             {
                 // Validar que el LineNum esté dentro del rango de líneas en SAP
-                if (lineUpdate.LineNum < 0 || lineUpdate.LineNum >= salesOrder.Lines.Count)
-                {
-                    throw new Exception($"El número de línea {lineUpdate.LineNum} no existe en la orden.");
-                }
+                //if (lineUpdate.LineNum < 0 || lineUpdate.LineNum >= salesOrder.Lines.Count)
+                //{
+                //    throw new Exception($"El número de línea {lineUpdate.LineNum} no existe en la orden.");
+                //}
 
                 // Mover el puntero directamente a la línea enviada en el JSON
-                salesOrder.Lines.SetCurrentLine(lineUpdate.LineNum);
+                salesOrder.Lines.SetCurrentLine(i);
 
                 // Validar que sea el mismo ítem si se envía ItemCode
                 if (!string.IsNullOrEmpty(lineUpdate.ItemCode) &&
@@ -216,6 +218,8 @@ namespace IntegracionesSAP
                 salesOrder.Lines.Price = lineUpdate.Price;
                 salesOrder.Lines.UnitPrice = lineUpdate.Price;
                 salesOrder.Lines.DiscountPercent = lineUpdate.DiscountPercent;
+
+                i++;
             }
 
             // Guardar cambios
