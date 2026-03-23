@@ -136,7 +136,7 @@ namespace IntegracionesSAP.Services.Sales
             }
         }
 
-        public ApiResponse CloseSalesOrder(int docEntry)
+        public ApiResponse CloseSalesOrder(ORDR obj)
         {
             ApiResponse response = new ApiResponse();
             Documents BaseDoc = null;
@@ -145,8 +145,8 @@ namespace IntegracionesSAP.Services.Sales
             {
                 BaseDoc = (Documents)_company.GetBusinessObject(BoObjectTypes.oOrders);
 
-                if (!BaseDoc.GetByKey(docEntry))
-                    return response.Error(404, $"Orden [{docEntry}] no encontrada");
+                if (!BaseDoc.GetByKey((int)obj.DocEntry))
+                    return response.Error(404, $"Orden [{obj.DocEntry}] no encontrada");
 
                 for (int i = 0; i < BaseDoc.Lines.Count; i++)
                 {
@@ -158,15 +158,16 @@ namespace IntegracionesSAP.Services.Sales
                     }
                 }
 
+                BaseDoc.Comments = obj.Comments;
                 int ret = BaseDoc.Update();
 
                 if (ret != 0)
                 {
                     _company.GetLastError(out int errCode, out string errMsg);
-                    return response.Error(500, $"Error cerrando ORDR: {errCode} - {errMsg}");
+                    return response.Error(500, $"Error closing ORDR: {errCode} - {errMsg}");
                 }
 
-                return response.Ok(docEntry, "Orden cerrada correctamente");
+                return response.Ok(BaseDoc.DocEntry, "Orden cerrada correctamente");
             }
             catch (Exception ex)
             {
@@ -179,27 +180,36 @@ namespace IntegracionesSAP.Services.Sales
             }
         }
 
-        public ApiResponse CancelSalesOrder(int docEntry)
+        public ApiResponse CancelSalesOrder(ORDR obj)
         {
             ApiResponse response = new ApiResponse();
             Documents SAPobj = null;
-
+            int ret;
             try
             {
                 SAPobj = (Documents)_company.GetBusinessObject(BoObjectTypes.oOrders);
 
-                if (!SAPobj.GetByKey(docEntry))
-                    return response.Error(404, $"Orden [{docEntry}] no encontrada");
+                if (!SAPobj.GetByKey((int)obj.DocEntry))
+                    return response.Error(404, $"Orden [{obj.DocEntry}] no encontrada");
 
-                int ret = SAPobj.Cancel();
-
+                // actualizar comentarios
+                SAPobj.Comments = obj.Comments;
+                ret = SAPobj.Update();
                 if (ret != 0)
                 {
                     _company.GetLastError(out int errCode, out string errMsg);
-                    return response.Error(500, $"Error cancelando ORDR: {errCode} - {errMsg}");
+                    return response.Error(500, $"Error cancelling ORDR: {errCode} - {errMsg}");
                 }
 
-                return response.Ok(docEntry, "Orden cancelada correctamente");
+                // cancelar
+                ret = SAPobj.Cancel();
+                if (ret != 0)
+                {
+                    _company.GetLastError(out int errCode, out string errMsg);
+                    return response.Error(500, $"Error cancelling ORDR: {errCode} - {errMsg}");
+                }
+
+                return response.Ok(obj.DocEntry, "Orden cancelada correctamente");
             }
             catch (Exception ex)
             {
@@ -524,7 +534,7 @@ namespace IntegracionesSAP.Services.Sales
                 BaseDoc = (Documents)_company.GetBusinessObject(BoObjectTypes.oDeliveryNotes);
 
                 if (!BaseDoc.GetByKey((int)obj.DocEntry))
-                    return response.Error(404, $"Orden [{obj.DocEntry}] no encontrada");
+                    return response.Error(404, $"Entrega [{obj.DocEntry}] no encontrada");
 
                 SAPobj = (Documents)_company.GetBusinessObject(BoObjectTypes.oInvoices);
 
@@ -612,6 +622,107 @@ namespace IntegracionesSAP.Services.Sales
                 if (BaseDoc != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(BaseDoc);
             }
         }
+
+        public ApiResponse CopyDeliveryToReturn(ODLN obj)
+        {
+            ApiResponse response = new ApiResponse();
+            Documents SAPobj = null;
+            Documents BaseDoc = null;
+
+            try
+            {
+                BaseDoc = (Documents)_company.GetBusinessObject(BoObjectTypes.oDeliveryNotes);
+
+                if (!BaseDoc.GetByKey((int)obj.DocEntry))
+                    return response.Error(404, $"Entrega [{obj.DocEntry}] no encontrada");
+
+                SAPobj = (Documents)_company.GetBusinessObject(BoObjectTypes.oReturns);
+
+                SAPobj.CardCode = BaseDoc.CardCode;
+                SAPobj.CardName = BaseDoc.CardName;
+                SAPobj.DocDate = DateTime.Now;
+                SAPobj.TaxDate = DateTime.Now;
+                SAPobj.Series = obj.TargetSeries;
+                SAPobj.SalesPersonCode = BaseDoc.SalesPersonCode;
+
+                if (!string.IsNullOrEmpty(obj.Comments))
+                    SAPobj.Comments = obj.Comments;
+
+                // copiar campos de usuario - header
+                for (int i = 0; i < BaseDoc.UserFields.Fields.Count; i++)
+                {
+                    try
+                    {
+                        string name = BaseDoc.UserFields.Fields.Item(i).Name;
+                        var value = BaseDoc.UserFields.Fields.Item(i).Value;
+                        SAPobj.UserFields.Fields.Item(name).Value = value;
+                    }
+                    catch { }
+                }
+
+                for (int i = 0; i < BaseDoc.Lines.Count; i++)
+                {
+                    BaseDoc.Lines.SetCurrentLine(i);
+
+                    if (BaseDoc.Lines.LineStatus == BoStatus.bost_Open)
+                    {
+                        SAPobj.Lines.BaseEntry = (int)obj.DocEntry;
+                        SAPobj.Lines.BaseType = (int)BoObjectTypes.oDeliveryNotes;
+                        SAPobj.Lines.BaseLine = BaseDoc.Lines.LineNum;
+                        SAPobj.Lines.SerialNum = BaseDoc.Lines.SerialNum;
+                        SAPobj.Lines.Quantity = BaseDoc.Lines.RemainingOpenQuantity;
+
+                        // campos de usuario - linea
+                        for (int u = 0; u < BaseDoc.Lines.UserFields.Fields.Count; u++)
+                        {
+                            try
+                            {
+                                string name = BaseDoc.Lines.UserFields.Fields.Item(u).Name;
+                                var value = BaseDoc.Lines.UserFields.Fields.Item(u).Value;
+                                SAPobj.Lines.UserFields.Fields.Item(name).Value = value;
+                            }
+                            catch { }
+                        }
+
+                        // copiar series
+                        for (int s = 0; s < BaseDoc.Lines.SerialNumbers.Count; s++)
+                        {
+                            BaseDoc.Lines.SerialNumbers.SetCurrentLine(s);
+                            SAPobj.Lines.SerialNumbers.SystemSerialNumber = BaseDoc.Lines.SerialNumbers.SystemSerialNumber;
+                            SAPobj.Lines.SerialNumbers.Add();
+                        }
+
+                        SAPobj.Lines.Add();
+                    }
+                }
+
+                int ret = SAPobj.Add();
+
+                if (ret != 0)
+                {
+                    _company.GetLastError(out int errCode, out string errMsg);
+                    return response.Error(500, $"Error SAP ORDN: {errCode} - {errMsg}");
+                }
+
+                int docEntry = int.Parse(_company.GetNewObjectKey());
+
+                return response.Ok(new SAPObjResult
+                {
+                    DocEntry = docEntry,
+                    DocType = BoObjectTypes.oReturns
+                });
+            }
+            catch (Exception ex)
+            {
+                return response.Error(500, $"Error SAP ORDN: {ex.Message}");
+            }
+            finally
+            {
+                if (SAPobj != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(SAPobj);
+                if (BaseDoc != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(BaseDoc);
+            }
+        }
+
 
         public ApiResponse CloseDelivery(int DocEntry)
         {
@@ -750,6 +861,35 @@ namespace IntegracionesSAP.Services.Sales
                 if (SAPobj != null)
                     System.Runtime.InteropServices.Marshal.ReleaseComObject(SAPobj);
             }
+        }
+
+        public byte[] GenerateInvoicePdf(int docEntry)
+        {
+            CompanyService companyService = _company.GetCompanyService();
+
+            ReportLayoutsService layoutService =
+                (ReportLayoutsService)companyService.GetBusinessService(ServiceTypes.ReportLayoutsService);
+
+            ReportLayoutParams layoutParams =
+                (ReportLayoutParams)layoutService.GetDataInterface(
+                    ReportLayoutsServiceDataInterfaces.rlsdiReportLayoutParams);
+
+            layoutParams.LayoutCode = "INV20099";
+
+            ReportLayout layout = layoutService.GetReportLayout(layoutParams);
+
+            ReportLayoutPrintParams printParams =
+                (ReportLayoutPrintParams)layoutService.GetDataInterface(
+                    ReportLayoutsServiceDataInterfaces.rlsdiReportLayoutPrintParams);
+
+            printParams.DocEntry = docEntry;
+            printParams.LayoutCode = layout.LayoutCode;
+
+            layoutService.Print(printParams);
+
+            string pdfPath = @"C:\Temp\invoice.pdf";
+
+            return File.ReadAllBytes(pdfPath);
         }
 
     }

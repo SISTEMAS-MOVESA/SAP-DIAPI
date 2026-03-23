@@ -1,10 +1,11 @@
 ﻿namespace IntegracionesSAP.Models.Purchasing
 {
-    public class OPOR
+    public class OPQT
     {
         public string? CardCode { get; set; }
 
         public int? Series { get; set; }
+        public int? TargetSeries { get; set; }
 
         public DateTime DocDate { get; set; } = DateTime.Now;
 
@@ -16,6 +17,6 @@
 
         public List<UserField> UserFields { get; set; } = new List<UserField>();
 
-        public List<POR1> Lines { get; set; } = new List<POR1>();
+        public List<PQT1> Lines { get; set; } = new List<PQT1>();
     }
 }

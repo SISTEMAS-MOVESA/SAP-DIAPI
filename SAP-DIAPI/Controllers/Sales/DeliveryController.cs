@@ -98,6 +98,43 @@ namespace IntegracionesSAP.Controllers.Sales
             }
         }
 
+        [HttpPost("CopyToReturn")]
+        public IActionResult DeliveryToReturn([FromBody] ODLN document)
+        {
+            ApiResponse response = new ApiResponse();
+            try
+            {
+                if (document == null)
+                    return Ok(response.Error(400, "Documento no puede ser nulo"));
+                if (document.DocEntry == null)
+                    return Ok(response.Error(400, "Campo [DocEntry] no pueder ser nulo."));
+                if (document.TargetSeries == 0)
+                    return Ok(response.Error(400, "Campo [TargetSeries] ingresado es invalido."));
+
+                response = service.Connect();
+                if (!response.Success) return Ok(response);
+
+                try
+                {
+                    response = service.CopyDeliveryToReturn(document);
+                    if (response.Success && response.Data is SAPObjResult result)
+                    {
+                        result.DocNum = SAPConnection.GetObjDocNum("ORDN", result.DocEntry ?? 0);
+                    }
+                }
+                finally
+                {
+                    service.Disconnect();
+                }
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return Ok(response.Error(500, ex.Message));
+            }
+        }
+
         [HttpPost("Close/{DocEntry}")]
         public IActionResult CloseDelivery([FromRoute] int DocEntry)
         {

@@ -1,6 +1,6 @@
 ﻿namespace IntegracionesSAP.Models.Purchasing
 {
-    public class POR1
+    public class PRQ1
     {
         public int? LineNum { get; set; }
 

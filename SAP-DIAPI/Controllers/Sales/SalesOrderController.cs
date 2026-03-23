@@ -137,21 +137,24 @@ namespace IntegracionesSAP.Controllers.Sales
             }
         }
 
-        [HttpPost("Cancel/{DocEntry}")]
-        public IActionResult CancelSalesOrder([FromRoute] int DocEntry)
+        [HttpPost("Cancel")]
+        public IActionResult CancelSalesOrder([FromBody] ORDR document)
         {
             ApiResponse response = new ApiResponse();
             try
             {
-                if (DocEntry == null || DocEntry == 0)
+                if (document.DocEntry == null || document.DocEntry == 0)
                     return Ok(response.Error(500, "Campo [DocEntry] no puede estar vacio."));
+
+                if (string.IsNullOrEmpty(document.Comments))
+                    return Ok(response.Error(500, "Campo [Comments] no puede estar vacio."));
 
                 response = service.Connect();
                 if (!response.Success) return Ok(response);
 
                 try
                 {
-                    response = service.CancelSalesOrder(DocEntry);
+                    response = service.CancelSalesOrder(document);
                 }
                 finally
                 {
@@ -166,21 +169,57 @@ namespace IntegracionesSAP.Controllers.Sales
             }
         }
 
-        [HttpPost("Close/{DocEntry}")]
-        public IActionResult CloseSalesOrder([FromRoute] int DocEntry)
+        [HttpPost("Close")]
+        public IActionResult CloseSalesOrder([FromBody] ORDR document)
         {
             ApiResponse response = new ApiResponse();
             try
             {
-                if (DocEntry == null || DocEntry == 0)
+                if (document.DocEntry == null || document.DocEntry == 0)
                     return Ok(response.Error(500, "Campo [DocEntry] no puede estar vacio."));
+
+                if (string.IsNullOrEmpty(document.Comments))
+                    return Ok(response.Error(500, "Campo [Comments] no puede estar vacio."));
 
                 response = service.Connect();
                 if (!response.Success) return Ok(response);
 
                 try
                 {
-                    response = service.CloseSalesOrder(DocEntry);
+                    response = service.CloseSalesOrder(document);
+                }
+                finally
+                {
+                    service.Disconnect();
+                }
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return Ok(response.Error(500, ex.Message));
+            }
+        }
+
+        [HttpGet("Invoice/PDF/{docEntry}")]
+        public IActionResult GetInvoicePdf(int docEntry)
+        {
+            ApiResponse response = new ApiResponse();
+            try
+            {
+
+                response = service.Connect();
+                if (!response.Success) return Ok(response);
+
+                try
+                {
+                    var pdf = service.GenerateInvoicePdf(docEntry);
+                    string base64 = Convert.ToBase64String(pdf);
+                    response.Ok(new
+                    {
+                        DocEntry = docEntry,
+                        PdfBase64 = base64
+                    });
                 }
                 finally
                 {
