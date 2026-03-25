@@ -648,7 +648,7 @@ namespace IntegracionesSAP.Services.Sales
                 if (!string.IsNullOrEmpty(obj.Comments))
                     SAPobj.Comments = obj.Comments;
 
-                // copiar campos de usuario - header
+                // ----------- copiar campos de usuario - header
                 for (int i = 0; i < BaseDoc.UserFields.Fields.Count; i++)
                 {
                     try
@@ -659,6 +659,17 @@ namespace IntegracionesSAP.Services.Sales
                     }
                     catch { }
                 }
+
+                foreach (var item in obj.UserFields)
+                {
+                    try
+                    {
+                        SAPobj.UserFields.Fields.Item(item.Key).Value = item.Value;
+                    }
+                    catch { }
+                }
+
+                // -----------
 
                 for (int i = 0; i < BaseDoc.Lines.Count; i++)
                 {

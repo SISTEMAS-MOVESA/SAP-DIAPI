@@ -108,6 +108,7 @@ namespace IntegracionesSAP.Controllers.Sales
                     return Ok(response.Error(400, "Documento no puede ser nulo"));
                 if (document.DocEntry == null)
                     return Ok(response.Error(400, "Campo [DocEntry] no pueder ser nulo."));
+
                 if (document.TargetSeries == 0)
                     return Ok(response.Error(400, "Campo [TargetSeries] ingresado es invalido."));
 
