@@ -1,6 +1,7 @@
 ﻿using IntegracionesSAP.Libs;
 using IntegracionesSAP.Models;
 using IntegracionesSAP.Models.Purchasing;
+using IntegracionesSAP.Models.Sales;
 using SAPbobsCOM;
 
 namespace IntegracionesSAP.Services.Purchasing
@@ -14,6 +15,34 @@ namespace IntegracionesSAP.Services.Purchasing
             _company = SAPConnection.GetDefaultCOM();
         }
 
+        public ApiResponse Connect()
+        {
+            ApiResponse response = new ApiResponse();
+            try
+            {
+                SAPConnection.Connect();
+                return response.Ok();
+            }
+            catch (Exception ex)
+            {
+                return response.Error(500, ex.Message);
+            }
+        }
+
+        public ApiResponse Disconnect()
+        {
+            ApiResponse response = new ApiResponse();
+            try
+            {
+                SAPConnection.Disconnect();
+                return response.Ok();
+            }
+            catch (Exception ex)
+            {
+                return response.Error(500, ex.Message);
+            }
+
+        }
         #region CREATE
 
         public ApiResponse CreatePurchaseRequest(OPRQ obj)
@@ -133,23 +162,31 @@ namespace IntegracionesSAP.Services.Purchasing
                 doc.DocDate = DateTime.Now;
                 doc.DocDueDate = obj.DocDueDate;
                 doc.Comments = obj.Comments;
+                doc.DocType = obj.DocType;
 
                 CopyUserFields(obj.UserFields, doc.UserFields);
 
-                int i = 0;
                 foreach (var line in obj.Lines)
                 {
-                    doc.Lines.SetCurrentLine(i);
+                    doc.Lines.SetCurrentLine((int)line.LineNum);
 
-                    doc.Lines.ItemCode = line.ItemCode;
+                    if(obj.DocType == BoDocumentTypes.dDocument_Items)
+                    {
+                        doc.Lines.ItemCode = line.ItemCode;
+                    }
+                    else
+                    {
+                        doc.Lines.ItemDescription = line.ItemDescription;
+                    }
+                    
                     doc.Lines.Quantity = line.Quantity;
                     doc.Lines.Price = line.UnitPrice;
                     doc.Lines.AccountCode = line.AccountCode;
+                    doc.Lines.TaxCode = line.TaxCode;
 
                     CopyUserFields(line.UserFields, doc.Lines.UserFields);
 
                     doc.Lines.Add();
-                    i++;
                 }
 
                 int ret = doc.Add();
