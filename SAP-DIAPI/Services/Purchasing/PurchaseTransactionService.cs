@@ -48,36 +48,36 @@ namespace IntegracionesSAP.Services.Purchasing
         public ApiResponse CreatePurchaseRequest(OPRQ obj)
         {
             ApiResponse response = new ApiResponse();
-            Documents doc = null;
+            Documents SAPobj = null;
 
             try
             {
-                doc = (Documents)_company.GetBusinessObject(BoObjectTypes.oPurchaseRequest);
+                SAPobj = (Documents)_company.GetBusinessObject(BoObjectTypes.oPurchaseRequest);
 
-                doc.DocDate = DateTime.Now;
-                doc.RequriedDate = obj.DocDueDate;
-                doc.Comments = obj.Comments;
+                SAPobj.DocDate = DateTime.Now;
+                SAPobj.RequriedDate = obj.DocDueDate;
+                SAPobj.Comments = obj.Comments;
 
                 // UDF Header
-                CopyUserFields(obj.UserFields, doc.UserFields);
+                CopyUserFields(obj.UserFields, SAPobj.UserFields);
 
                 int i = 0;
                 foreach (var line in obj.Lines)
                 {
-                    doc.Lines.SetCurrentLine(i);
+                    SAPobj.Lines.SetCurrentLine(i);
 
-                    doc.Lines.ItemCode = line.ItemCode;
-                    doc.Lines.Quantity = line.Quantity;
-                    doc.Lines.RequiredDate = obj.DocDueDate;
-                    doc.Lines.AccountCode = line.AccountCode;
+                    SAPobj.Lines.ItemCode = line.ItemCode;
+                    SAPobj.Lines.Quantity = line.Quantity;
+                    SAPobj.Lines.RequiredDate = obj.DocDueDate;
+                    SAPobj.Lines.AccountCode = line.AccountCode;
 
-                    CopyUserFields(line.UserFields, doc.Lines.UserFields);
+                    CopyUserFields(line.UserFields, SAPobj.Lines.UserFields);
 
-                    doc.Lines.Add();
+                    SAPobj.Lines.Add();
                     i++;
                 }
 
-                int ret = doc.Add();
+                int ret = SAPobj.Add();
 
                 if (ret != 0)
                 {
@@ -85,7 +85,13 @@ namespace IntegracionesSAP.Services.Purchasing
                     return response.Error(500, $"Error SAP OPRQ: {errCode} - {errMsg}");
                 }
 
-                return response.Ok(int.Parse(_company.GetNewObjectKey()));
+                int docEntry = int.Parse(_company.GetNewObjectKey());
+
+                return response.Ok(new SAPObjResult
+                {
+                    DocEntry = docEntry,
+                    DocType = BoObjectTypes.oPurchaseRequest
+                });
             }
             catch (Exception ex)
             {
@@ -93,7 +99,7 @@ namespace IntegracionesSAP.Services.Purchasing
             }
             finally
             {
-                if (doc != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(doc);
+                if (SAPobj != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(SAPobj);
             }
         }
 
@@ -137,7 +143,13 @@ namespace IntegracionesSAP.Services.Purchasing
                     return response.Error(500, $"Error SAP OPQT: {errCode} - {errMsg}");
                 }
 
-                return response.Ok(int.Parse(_company.GetNewObjectKey()));
+                int docEntry = int.Parse(_company.GetNewObjectKey());
+
+                return response.Ok(new SAPObjResult
+                {
+                    DocEntry = docEntry,
+                    DocType = BoObjectTypes.oPurchaseQuotations
+                });
             }
             catch (Exception ex)
             {
@@ -163,6 +175,7 @@ namespace IntegracionesSAP.Services.Purchasing
                 doc.DocDueDate = obj.DocDueDate;
                 doc.Comments = obj.Comments;
                 doc.DocType = obj.DocType;
+                doc.Series = (int)obj.Series;
 
                 CopyUserFields(obj.UserFields, doc.UserFields);
 
@@ -180,7 +193,7 @@ namespace IntegracionesSAP.Services.Purchasing
                     }
                     
                     doc.Lines.Quantity = line.Quantity;
-                    doc.Lines.Price = line.UnitPrice;
+                    doc.Lines.UnitPrice = line.UnitPrice;
                     doc.Lines.AccountCode = line.AccountCode;
                     doc.Lines.TaxCode = line.TaxCode;
 
@@ -197,7 +210,13 @@ namespace IntegracionesSAP.Services.Purchasing
                     return response.Error(500, $"Error SAP OPOR: {errCode} - {errMsg}");
                 }
 
-                return response.Ok(int.Parse(_company.GetNewObjectKey()));
+                int docEntry = int.Parse(_company.GetNewObjectKey());
+
+                return response.Ok(new SAPObjResult
+                {
+                    DocEntry = docEntry,
+                    DocType = BoObjectTypes.oPurchaseOrders
+                });
             }
             catch (Exception ex)
             {
