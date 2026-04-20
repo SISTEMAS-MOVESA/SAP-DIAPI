@@ -93,6 +93,33 @@ namespace IntegracionesSAP.Libs
             }
         }
 
+        public static int ExecuteNonQuery(
+            DBConnection db, string query, Dictionary<string, object>? parameters = null
+        ){
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(db.ToString()))
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    cmd.CommandType = CommandType.Text;
+
+                    if (parameters != null)
+                    {
+                        foreach (var p in parameters)
+                            cmd.Parameters.AddWithValue(p.Key, p.Value ?? DBNull.Value);
+                    }
+
+                    conn.Open();
+
+                    return cmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error MSSQL.ExecuteNonQuery: {ex.Message}", ex);
+            }
+        }
+
         public static object Trim(string value)
         {
             if (string.IsNullOrWhiteSpace(value))

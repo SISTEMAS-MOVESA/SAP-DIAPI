@@ -5,13 +5,11 @@ namespace IntegracionesSAP.Models.Purchasing
     public class OPOR
     {
         public string? CardCode { get; set; }
-
         public int? Series { get; set; }
-
         public DateTime DocDate { get; set; } = DateTime.Now;
-
         public DateTime DocDueDate { get; set; } = DateTime.Now;
         public BoDocumentTypes DocType { get; set; } = BoDocumentTypes.dDocument_Items;
+        public string DocCurrency { get; set; } = "USD";
 
         public string? Comments { get; set; }
 
