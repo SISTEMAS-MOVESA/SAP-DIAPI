@@ -14,6 +14,18 @@ namespace IntegracionesSAP.Services.Inventory
             _company = SAPConnection.GetDefaultCOM();
         }
 
+        public ItemMasterDataService UseMovesa()
+        {
+            _company = SAPConnection.GetMovesaCOM();
+            return this;
+        }
+
+        public ItemMasterDataService UseABCompany()
+        {
+            _company = SAPConnection.GetABCompanyCOM();
+            return this;
+        }
+
         public ApiResponse Connect()
         {
             ApiResponse response = new ApiResponse();
@@ -22,10 +34,7 @@ namespace IntegracionesSAP.Services.Inventory
                 SAPConnection.Connect();
                 return response.Ok();
             }
-            catch (Exception ex)
-            {
-                return response.Error(500, ex.Message);
-            }
+            catch (Exception ex) { return response.Error(500, ex.Message); }
         }
 
         public ApiResponse Disconnect()
@@ -39,6 +48,105 @@ namespace IntegracionesSAP.Services.Inventory
             catch (Exception ex)
             {
                 return response.Error(500, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Crea un nuevo Artículo (OITM) en SAP B1.
+        /// Mapea todos los campos del template de carga masiva.
+        /// Si se incluyen PriceLists, asigna el precio en cada lista de precios indicada.
+        /// </summary>
+        public ApiResponse CreateItem(OITM obj)
+        {
+            ApiResponse response = new ApiResponse();
+            Items item = null;
+
+            try
+            {
+                item = (Items)_company.GetBusinessObject(BoObjectTypes.oItems);
+
+                // ── Campos básicos ──────────────────────────────────────
+                item.ItemCode    = obj.ItemCode;
+                item.ItemName    = obj.ItemName;
+                if (!string.IsNullOrEmpty(obj.ForeignName))
+                    item.ForeignName = obj.ForeignName;
+
+                // ── Clasificación ───────────────────────────────────────
+                if (obj.ItemsGroupCode.HasValue)
+                    item.ItemsGroupCode = obj.ItemsGroupCode.Value;
+                if (obj.CustomsGroupCode.HasValue)
+                    item.CustomsGroupCode = obj.CustomsGroupCode.Value;
+                if (!string.IsNullOrEmpty(obj.BarCode))
+                    item.BarCode = obj.BarCode;
+
+                // ── Flags Y/N ───────────────────────────────────────────
+                if (!string.IsNullOrEmpty(obj.VATLiable))
+                    item.VatLiable = YN(obj.VATLiable);
+                if (!string.IsNullOrEmpty(obj.PurchaseItem))
+                    item.PurchaseItem = YN(obj.PurchaseItem);
+                if (!string.IsNullOrEmpty(obj.SalesItem))
+                    item.SalesItem = YN(obj.SalesItem);
+                if (!string.IsNullOrEmpty(obj.InventoryItem))
+                    item.InventoryItem = YN(obj.InventoryItem);
+                if (!string.IsNullOrEmpty(obj.ManageStockByWarehouse))
+                    item.ManageStockByWarehouse = YN(obj.ManageStockByWarehouse);
+
+                // ── Proveedor ───────────────────────────────────────────
+                if (!string.IsNullOrEmpty(obj.Mainsupplier))
+                    item.Mainsupplier = obj.Mainsupplier;
+                if (!string.IsNullOrEmpty(obj.SupplierCatalogNo))
+                    item.SupplierCatalogNo = obj.SupplierCatalogNo;
+
+                // ── Propiedades dinámicas (QryGroup1..64) ───────────────
+                if (obj.Properties != null)
+                {
+                    foreach (var prop in obj.Properties)
+                    {
+                        var pi = item.GetType().GetProperty($"Properties{prop.Property}");
+                        if (pi != null && pi.CanWrite)
+                            pi.SetValue(item, prop.Value);
+                    }
+                }
+
+                // ── Listas de precios ───────────────────────────────────
+                if (obj.PriceLists != null && obj.PriceLists.Any())
+                {
+                    foreach (var pl in obj.PriceLists)
+                    {
+                        if (!pl.ListNum.HasValue || !pl.Price.HasValue) continue;
+
+                        for (int i = 0; i < item.PriceList.Count; i++)
+                        {
+                            item.PriceList.SetCurrentLine(i);
+                            if (item.PriceList.PriceList == pl.ListNum.Value)
+                            {
+                                item.PriceList.Price = pl.Price.Value;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // ── Campos de usuario (U_*) ─────────────────────────────
+                CopyUserFields(obj.UserFields, item.UserFields);
+
+                int ret = item.Add();
+                if (ret != 0)
+                {
+                    _company.GetLastError(out int errCode, out string errMsg);
+                    return response.Error(500, $"Error SAP OITM [{obj.ItemCode}]: {errCode} - {errMsg}");
+                }
+
+                return response.Ok(new { ItemCode = obj.ItemCode });
+            }
+            catch (Exception ex)
+            {
+                return response.Error(500, ex.Message);
+            }
+            finally
+            {
+                if (item != null)
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(item);
             }
         }
 
@@ -97,6 +205,23 @@ namespace IntegracionesSAP.Services.Inventory
                     System.Runtime.InteropServices.Marshal.ReleaseComObject(item);
             }
         }
+
+        #region HELPERS
+
+        private static BoYesNoEnum YN(string? val)
+            => val?.Trim().ToUpper() == "Y" ? BoYesNoEnum.tYES : BoYesNoEnum.tNO;
+
+        private static void CopyUserFields(List<UserField>? fields, UserFields target)
+        {
+            if (fields == null) return;
+            foreach (var uf in fields)
+            {
+                try { target.Fields.Item(uf.Key).Value = uf.Value; }
+                catch { }
+            }
+        }
+
+        #endregion
 
         public ApiResponse UpdateSpecialPrices(OSPP model)
         {
