@@ -134,13 +134,16 @@ namespace IntegracionesSAP.Services.Purchasing
             {
                 doc = (Documents)_company.GetBusinessObject(BoObjectTypes.oPurchaseQuotations);
 
-                doc.CardCode    = obj.CardCode;
-                doc.DocDate     = obj.DocDate;
-                doc.DocDueDate  = obj.DocDueDate;
-                doc.Comments    = obj.Comments;
-                doc.DocType     = obj.DocType;
-                doc.Series      = (int)obj.Series;
-                doc.DocCurrency = obj.DocCurrency;
+                doc.CardCode   = obj.CardCode;
+                doc.DocDate    = obj.DocDate;
+                doc.DocDueDate = obj.DocDueDate;
+                doc.Comments   = obj.Comments;
+                doc.DocType    = obj.DocType;
+                doc.RequriedDate = obj.DocDueDate;
+                // DocCurrency ANTES de Series: evita rechazo -5002 en documentos de servicio
+                if (!string.IsNullOrEmpty(obj.DocCurrency))
+                    doc.DocCurrency = obj.DocCurrency;
+                doc.Series = (int)obj.Series;
 
                 CopyUserFields(obj.UserFields, doc.UserFields);
 
@@ -208,13 +211,15 @@ namespace IntegracionesSAP.Services.Purchasing
             {
                 doc = (Documents)_company.GetBusinessObject(BoObjectTypes.oPurchaseOrders);
 
-                doc.CardCode    = obj.CardCode;
-                doc.DocDate     = obj.DocDate;
-                doc.DocDueDate  = obj.DocDueDate;
-                doc.Comments    = obj.Comments;
-                doc.DocType     = obj.DocType;
-                doc.Series      = (int)obj.Series;
-                doc.DocCurrency = obj.DocCurrency;
+                doc.CardCode   = obj.CardCode;
+                doc.DocDate    = obj.DocDate;
+                doc.DocDueDate = obj.DocDueDate;
+                doc.Comments   = obj.Comments;
+                doc.DocType    = obj.DocType;
+                // DocCurrency ANTES de Series: evita rechazo -5002 en documentos de servicio
+                if (!string.IsNullOrEmpty(obj.DocCurrency))
+                    doc.DocCurrency = obj.DocCurrency;
+                doc.Series = (int)obj.Series;
 
                 CopyUserFields(obj.UserFields, doc.UserFields);
 
@@ -248,6 +253,8 @@ namespace IntegracionesSAP.Services.Purchasing
                         doc.Lines.UnitPrice = line.UnitPrice;
                         if (!string.IsNullOrEmpty(line.WhsCode))
                             doc.Lines.WarehouseCode = line.WhsCode;
+                        //if (!string.IsNullOrEmpty(obj.DocCurrency))
+                        //    doc.Lines.Currency = obj.DocCurrency;
                     }
                     else
                     {
@@ -257,6 +264,8 @@ namespace IntegracionesSAP.Services.Purchasing
                         doc.Lines.UnitPrice       = line.UnitPrice;
                         if (!string.IsNullOrEmpty(line.AccountCode))
                             doc.Lines.AccountCode = line.AccountCode;
+                        //if (!string.IsNullOrEmpty(obj.DocCurrency))
+                        //    doc.Lines.Currency = obj.DocCurrency;
                     }
 
                     if (!string.IsNullOrEmpty(line.TaxCode))
@@ -304,13 +313,14 @@ namespace IntegracionesSAP.Services.Purchasing
             {
                 doc = (Documents)_company.GetBusinessObject(BoObjectTypes.oPurchaseDeliveryNotes);
 
-                doc.CardCode    = obj.CardCode;
-                doc.DocDate     = obj.DocDate ?? DateTime.Now;
-                doc.DocDueDate  = obj.DocDueDate ?? DateTime.Now;
-                doc.Comments    = obj.Comments;
-                doc.Series      = (int)obj.Series;
+                doc.CardCode   = obj.CardCode;
+                doc.DocDate    = obj.DocDate ?? DateTime.Now;
+                doc.DocDueDate = obj.DocDueDate ?? DateTime.Now;
                 doc.DocCurrency = obj.DocCurrency;
-                doc.DocTotal    = obj.DocTotal;
+                doc.Comments   = obj.Comments;
+                if (!string.IsNullOrEmpty(obj.DocCurrency))
+                    doc.DocCurrency = obj.DocCurrency;
+                doc.Series   = (int)obj.Series;
                 doc.NumAtCard   = obj.NumAtCard;
                 doc.Reference2  = "SAP-DIAPI";
 
@@ -341,9 +351,12 @@ namespace IntegracionesSAP.Services.Purchasing
                         {
                             doc.Lines.SerialNumbers.InternalSerialNumber     = s.InternalSerialNumber;
                             doc.Lines.SerialNumbers.ManufacturerSerialNumber = s.ManufacturerSerialNumber;
-                            doc.Lines.SerialNumbers.ManufactureDate          = s.ManufactureDate ?? DateTime.Now;
+                            doc.Lines.SerialNumbers.ManufactureDate          = s.ManufactureDate;
                             doc.Lines.SerialNumbers.Location                 = s.Location;
                             doc.Lines.SerialNumbers.Notes                    = s.Notes;
+                            doc.Lines.SerialNumbers.BatchID                  = s.BatchID;
+                            // UDFs del serial (U_NADUANA, U_FPAGO, U_NPOLIZA, etc.)
+                            CopyUserFields(s.UserFields, doc.Lines.SerialNumbers.UserFields);
                             doc.Lines.SerialNumbers.Add();
                         }
                     }
@@ -378,6 +391,71 @@ namespace IntegracionesSAP.Services.Purchasing
         }
 
         /// <summary>
+        /// Crea una Entrada de Mercancía (OPDN) para motos y luego actualiza los UDFs
+        /// directamente en OSRN via SQL directo.
+        /// Workaround: la integración DI-API no persiste los UDFs de SerialNumbers.UserFields en OSRN.
+        /// El UPDATE se ejecuta tras el doc.Add() exitoso; errores individuales no abortan la respuesta.
+        /// </summary>
+        public ApiResponse CreateGoodsReceiptMotos(OPDN obj)
+        {
+            // 1. Crear el OPDN normalmente via DI-API
+            ApiResponse response = CreateGoodsReceipt(obj);
+            if (!response.Success) return response;
+
+            // 2. UPDATE directo en OSRN para cada serial
+            var sqlErrors = new List<string>();
+
+            foreach (var line in obj.Lines)
+            {
+                if (line.Serials == null || !line.Serials.Any()) continue;
+
+                var udfMap = new Dictionary<string, string>();
+
+                foreach (var s in line.Serials)
+                {
+                    if (string.IsNullOrEmpty(s.ManufacturerSerialNumber)) continue;
+
+                    udfMap = s.UserFields?.ToDictionary(u => u.Key, u => u.Value ?? "")
+                             ?? new Dictionary<string, string>();
+                    try
+                    {
+                        MSSQL.ExecuteNonQuery(MSSQL.DB_DEFAULT,
+                            @"UPDATE OSRN SET
+                                U_NADUANA       = @NADUANA,
+                                U_FPAGO         = @FPAGO,
+                                U_NPOLIZA       = @NPOLIZA,
+                                U_NITEM         = @NITEM,
+                                U_CODIGOREP     = @CODIGOREP,
+                                U_Estado_Moto   = '01',
+                                U_UBICACION_DCM = '100000080'
+                              WHERE MNFSERIAL = @MNFSERIAL AND ITEMCODE = @ITEMCODE",
+                            new Dictionary<string, object>
+                            {
+                                { "@NADUANA",   udfMap.GetValueOrDefault("U_NADUANA",   "") },
+                                { "@FPAGO",     udfMap.GetValueOrDefault("U_FPAGO",     "") },
+                                { "@NPOLIZA",   udfMap.GetValueOrDefault("U_NPOLIZA",   "") },
+                                { "@NITEM",     udfMap.GetValueOrDefault("U_NITEM",     "") },
+                                { "@CODIGOREP", udfMap.GetValueOrDefault("U_CODIGOREP", "") },
+                                { "@MNFSERIAL", s.ManufacturerSerialNumber },
+                                { "@ITEMCODE",  line.ItemCode ?? "" }
+                            }
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        sqlErrors.Add($"{s.ManufacturerSerialNumber}: {ex.Message}");
+                    }
+                }
+            }
+
+            // Adjuntar errores SQL al resultado sin romper el éxito del OPDN
+            if (sqlErrors.Any() && response.Data is SAPObjResult result)
+                result.SqlErrors = sqlErrors;
+
+            return response;
+        }
+
+        /// <summary>
         /// Crea una Factura de Proveedores (OPCH — object type 18).
         /// Puede generarse desde OPDN (BaseType=20), OPOR (BaseType=22),
         /// o como documento independiente sin base.
@@ -392,13 +470,15 @@ namespace IntegracionesSAP.Services.Purchasing
             {
                 doc = (Documents)_company.GetBusinessObject(BoObjectTypes.oPurchaseInvoices);
 
-                doc.CardCode    = obj.CardCode;
-                doc.DocDate     = obj.DocDate;
-                doc.DocDueDate  = obj.DocDueDate;
-                doc.Comments    = obj.Comments;
-                doc.DocType     = obj.DocType;
-                doc.Series      = (int)obj.Series;
-                doc.DocCurrency = obj.DocCurrency;
+                doc.CardCode   = obj.CardCode;
+                doc.DocDate    = obj.DocDate;
+                doc.DocDueDate = obj.DocDueDate;
+                doc.Comments   = obj.Comments;
+                doc.DocType    = obj.DocType;
+                // DocCurrency ANTES de Series: evita rechazo -5002 en documentos de servicio
+                if (!string.IsNullOrEmpty(obj.DocCurrency))
+                    doc.DocCurrency = obj.DocCurrency;
+                doc.Series = (int)obj.Series;
                 if (!string.IsNullOrEmpty(obj.NumAtCard))
                     doc.NumAtCard = obj.NumAtCard;
 
@@ -447,6 +527,56 @@ namespace IntegracionesSAP.Services.Purchasing
                     DocEntry = docEntry,
                     DocType  = BoObjectTypes.oPurchaseInvoices
                 });
+            }
+            catch (Exception ex)
+            {
+                return response.Error(500, ex.Message);
+            }
+            finally
+            {
+                if (doc != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(doc);
+            }
+        }
+
+        #endregion
+
+        #region CLOSE
+
+        /// <summary>
+        /// Cierra una Solicitud de Compra (OPRQ) en SAP B1.
+        /// </summary>
+        public ApiResponse ClosePurchaseRequest(int docEntry)
+            => CloseDocument(docEntry, BoObjectTypes.oPurchaseRequest, "OPRQ");
+
+        /// <summary>
+        /// Cierra una Oferta de Compra (OPQT) en SAP B1.
+        /// </summary>
+        public ApiResponse ClosePurchaseQuotation(int docEntry)
+            => CloseDocument(docEntry, BoObjectTypes.oPurchaseQuotations, "OPQT");
+
+        /// <summary>
+        /// Cierra un Pedido de Compra (OPOR) en SAP B1.
+        /// </summary>
+        public ApiResponse ClosePurchaseOrder(int docEntry)
+            => CloseDocument(docEntry, BoObjectTypes.oPurchaseOrders, "OPOR");
+
+        private ApiResponse CloseDocument(int docEntry, BoObjectTypes objType, string label)
+        {
+            ApiResponse response = new ApiResponse();
+            Documents doc = null;
+            try
+            {
+                doc = (Documents)_company.GetBusinessObject(objType);
+                if (!doc.GetByKey(docEntry))
+                    return response.Error(404, $"Documento {label} DocEntry={docEntry} no encontrado");
+
+                int ret = doc.Close();
+                if (ret != 0)
+                {
+                    _company.GetLastError(out int errCode, out string errMsg);
+                    return response.Error(500, $"Error cerrando {label}: {errCode} - {errMsg}");
+                }
+                return response.Ok(new SAPObjResult { DocEntry = docEntry, DocType = objType });
             }
             catch (Exception ex)
             {

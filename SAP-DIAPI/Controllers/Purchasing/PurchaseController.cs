@@ -185,6 +185,34 @@ namespace IntegracionesSAP.Controllers.Purchasing
             catch (Exception ex) { return Ok(response.Error(500, ex.Message)); }
         }
 
+        /// <summary>
+        /// Crea una Entrada de Mercancía (OPDN) para motos y actualiza UDFs en OSRN via SQL directo.
+        /// Workaround por bug de integración DI-API que no persiste UserFields en SerialNumbers.
+        /// </summary>
+        [HttpPost("GoodsReceipt/Motos")]
+        public IActionResult CreateGoodsReceiptMotos([FromBody] OPDN document)
+        {
+            ApiResponse response = new ApiResponse();
+            try
+            {
+                if (document == null)
+                    return Ok(response.Error(400, "Documento no puede ser nulo"));
+                if (document.Lines == null || !document.Lines.Any())
+                    return Ok(response.Error(400, "El documento no contiene lineas"));
+
+                response = service.Connect();
+                if (!response.Success) return Ok(response);
+                try
+                {
+                    response = service.CreateGoodsReceiptMotos(document);
+                    EnrichDocNum(response, "OPDN");
+                }
+                finally { service.Disconnect(); }
+                return Ok(response);
+            }
+            catch (Exception ex) { return Ok(response.Error(500, ex.Message)); }
+        }
+
         // ─────────────────────────────────────────────────────────────
         // AP INVOICE  —  OPCH  (object type 18)
         // ─────────────────────────────────────────────────────────────
@@ -231,6 +259,65 @@ namespace IntegracionesSAP.Controllers.Purchasing
                     response = service.CreateAPInvoice(document);
                     EnrichDocNum(response, "OPCH");
                 }
+                finally { service.Disconnect(); }
+                return Ok(response);
+            }
+            catch (Exception ex) { return Ok(response.Error(500, ex.Message)); }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // CLOSE OPERATIONS  —  OPRQ / OPQT / OPOR
+        // ─────────────────────────────────────────────────────────────
+
+        /// <summary>Cierra una Solicitud de Compra (OPRQ) en SAP B1.</summary>
+        [HttpPost("PurchaseRequest/Close")]
+        public IActionResult ClosePurchaseRequest([FromBody] OPRQ request)
+        {
+            ApiResponse response = new ApiResponse();
+            try
+            {
+                if (request == null || request.DocEntry <= 0)
+                    return Ok(response.Error(400, "DocEntry requerido"));
+
+                response = service.Connect();
+                if (!response.Success) return Ok(response);
+                try { response = service.ClosePurchaseRequest(request.DocEntry); }
+                finally { service.Disconnect(); }
+                return Ok(response);
+            }
+            catch (Exception ex) { return Ok(response.Error(500, ex.Message)); }
+        }
+
+        /// <summary>Cierra una Oferta de Compra (OPQT) en SAP B1.</summary>
+        [HttpPost("PurchaseQuotation/Close")]
+        public IActionResult ClosePurchaseQuotation([FromBody] OPQT request)
+        {
+            ApiResponse response = new ApiResponse();
+            try
+            {
+                if (request == null || request.DocEntry <= 0)
+                    return Ok(response.Error(400, "DocEntry requerido"));
+                response = service.Connect();
+                if (!response.Success) return Ok(response);
+                try { response = service.ClosePurchaseQuotation(request.DocEntry); }
+                finally { service.Disconnect(); }
+                return Ok(response);
+            }
+            catch (Exception ex) { return Ok(response.Error(500, ex.Message)); }
+        }
+
+        /// <summary>Cierra un Pedido de Compra (OPOR) en SAP B1.</summary>
+        [HttpPost("PurchaseOrder/Close")]
+        public IActionResult ClosePurchaseOrder([FromBody] OPOR request)
+        {
+            ApiResponse response = new ApiResponse();
+            try
+            {
+                if (request == null || request.DocEntry <= 0)
+                    return Ok(response.Error(400, "DocEntry requerido"));
+                response = service.Connect();
+                if (!response.Success) return Ok(response);
+                try { response = service.ClosePurchaseOrder(request.DocEntry); }
                 finally { service.Disconnect(); }
                 return Ok(response);
             }

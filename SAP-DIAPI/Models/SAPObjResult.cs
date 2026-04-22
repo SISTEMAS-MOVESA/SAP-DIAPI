@@ -6,8 +6,10 @@ namespace IntegracionesSAP.Models
     {
         public int? DocEntry { get; set; }
         public int? DocNum { get; set; }
-
         public BoObjectTypes DocType { get; set; }
+
+        /// <summary>Errores no-fatales de pasos post-creación (e.g. UPDATE OSRN UDFs).</summary>
+        public List<string>? SqlErrors { get; set; }
 
         public SAPObjResult() { }
 

@@ -4,6 +4,7 @@ namespace IntegracionesSAP.Models.Purchasing
 {
     public class OPQT
     {
+        public int DocEntry { get; set; } = 0;
         public string? CardCode { get; set; }
 
         public int? Series { get; set; }

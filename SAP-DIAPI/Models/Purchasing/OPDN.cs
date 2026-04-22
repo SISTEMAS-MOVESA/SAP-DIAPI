@@ -6,7 +6,7 @@
         public DateTime? DocDate { get; set; }
         public DateTime? DocDueDate { get; set; }
 
-        public string DocCurrency { get; set; }
+        public string DocCurrency { get; set; } = "USD";
         public double DocTotal { get; set; }
         public string NumAtCard { get; set; }
 

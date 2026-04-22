@@ -2,6 +2,7 @@
 {
     public class OPRQ
     {
+        public int DocEntry { get; set; } = 0;
         public string? CardCode { get; set; }
 
         public int? Series { get; set; }
