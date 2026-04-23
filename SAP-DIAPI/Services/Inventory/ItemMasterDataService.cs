@@ -98,15 +98,21 @@ namespace IntegracionesSAP.Services.Inventory
                     item.SupplierCatalogNo = obj.SupplierCatalogNo;
 
                 // ── Propiedades dinámicas (QryGroup1..64) ───────────────
-                if (obj.Properties != null)
+                foreach (var UP in obj.Properties ?? [])
                 {
-                    foreach (var prop in obj.Properties)
-                    {
-                        var pi = item.GetType().GetProperty($"Properties{prop.Property}");
-                        if (pi != null && pi.CanWrite)
-                            pi.SetValue(item, prop.Value);
-                    }
+                    try { item.Properties[UP.Property] = UP.Value; }
+                    catch { }
                 }
+
+                //if (obj.Properties != null)
+                //{
+                //    foreach (var prop in obj.Properties)
+                //    {
+                //        var pi = item.GetType().GetProperty($"Properties{prop.Property}");
+                //        if (pi != null && pi.CanWrite)
+                //            pi.SetValue(item, prop.Value);
+                //    }
+                //}
 
                 // ── Listas de precios ───────────────────────────────────
                 if (obj.PriceLists != null && obj.PriceLists.Any())
@@ -131,6 +137,84 @@ namespace IntegracionesSAP.Services.Inventory
                 CopyUserFields(obj.UserFields, item.UserFields);
 
                 int ret = item.Add();
+                if (ret != 0)
+                {
+                    _company.GetLastError(out int errCode, out string errMsg);
+                    return response.Error(500, $"Error SAP OITM [{obj.ItemCode}]: {errCode} - {errMsg}");
+                }
+
+                return response.Ok(new { ItemCode = obj.ItemCode });
+            }
+            catch (Exception ex)
+            {
+                return response.Error(500, ex.Message);
+            }
+            finally
+            {
+                if (item != null)
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(item);
+            }
+        }
+
+        /// <summary>
+        /// Actualiza datos maestros de un artículo existente (OITM) en SAP B1.
+        /// Solo sobrescribe los campos que vengan informados en el objeto.
+        /// </summary>
+        public ApiResponse UpdateItem(OITM obj)
+        {
+            ApiResponse response = new ApiResponse();
+            Items item = null;
+
+            try
+            {
+                item = (Items)_company.GetBusinessObject(BoObjectTypes.oItems);
+
+                if (!item.GetByKey(obj.ItemCode))
+                    return response.Error(404, $"Artículo [{obj.ItemCode}] no encontrado en SAP");
+
+                // ── Campos básicos ──────────────────────────────────────
+                if (!string.IsNullOrEmpty(obj.ItemName))
+                    item.ItemName = obj.ItemName;
+                if (!string.IsNullOrEmpty(obj.ForeignName))
+                    item.ForeignName = obj.ForeignName;
+
+                // ── Clasificación ───────────────────────────────────────
+                if (obj.ItemsGroupCode.HasValue)
+                    item.ItemsGroupCode = obj.ItemsGroupCode.Value;
+                if (obj.CustomsGroupCode.HasValue)
+                    item.CustomsGroupCode = obj.CustomsGroupCode.Value;
+                if (!string.IsNullOrEmpty(obj.BarCode))
+                    item.BarCode = obj.BarCode;
+
+                // ── Flags Y/N ───────────────────────────────────────────
+                if (!string.IsNullOrEmpty(obj.VATLiable))
+                    item.VatLiable = YN(obj.VATLiable);
+                if (!string.IsNullOrEmpty(obj.PurchaseItem))
+                    item.PurchaseItem = YN(obj.PurchaseItem);
+                if (!string.IsNullOrEmpty(obj.SalesItem))
+                    item.SalesItem = YN(obj.SalesItem);
+                if (!string.IsNullOrEmpty(obj.InventoryItem))
+                    item.InventoryItem = YN(obj.InventoryItem);
+                if (!string.IsNullOrEmpty(obj.ManageStockByWarehouse))
+                    item.ManageStockByWarehouse = YN(obj.ManageStockByWarehouse);
+
+                // ── Proveedor ───────────────────────────────────────────
+                if (!string.IsNullOrEmpty(obj.Mainsupplier))
+                    item.Mainsupplier = obj.Mainsupplier;
+                if (!string.IsNullOrEmpty(obj.SupplierCatalogNo))
+                    item.SupplierCatalogNo = obj.SupplierCatalogNo;
+
+                // ── Propiedades dinámicas (QryGroup1..64) ───────────────
+                foreach (var UP in obj.Properties ?? [])
+                {
+                    try { item.Properties[UP.Property] = UP.Value; }
+                    catch { }
+                }
+
+                // ── Campos de usuario (U_*) ─────────────────────────────
+                CopyUserFields(obj.UserFields, item.UserFields);
+
+                int ret = item.Update();
                 if (ret != 0)
                 {
                     _company.GetLastError(out int errCode, out string errMsg);

@@ -11,6 +11,8 @@ namespace IntegracionesSAP.Controllers.Inventory
     /// Endpoints:
     ///   POST /v1/Inventory/ItemMasterData/Create/Movesa    — Crea artículo en MOVESA
     ///   POST /v1/Inventory/ItemMasterData/Create/ABCompany — Crea artículo en ABCOMPANY
+    ///   POST /v1/Inventory/ItemMasterData/Update/Movesa    — Actualiza artículo en MOVESA
+    ///   POST /v1/Inventory/ItemMasterData/Update/ABCompany — Actualiza artículo en ABCOMPANY
     /// </summary>
     [Route("v1/Inventory/ItemMasterData")]
     [ApiController]
@@ -30,6 +32,14 @@ namespace IntegracionesSAP.Controllers.Inventory
         [HttpPost("Create/ABCompany")]
         public IActionResult CreateItemABCompany([FromBody] OITM document)
             => CreateItemInternal(document, () => service.UseABCompany().Connect());
+
+        [HttpPost("Update/Movesa")]
+        public IActionResult UpdateItemMovesa([FromBody] OITM document)
+            => UpdateItemInternal(document, () => service.UseMovesa().Connect());
+
+        [HttpPost("Update/ABCompany")]
+        public IActionResult UpdateItemABCompany([FromBody] OITM document)
+            => UpdateItemInternal(document, () => service.UseABCompany().Connect());
 
         // ─────────────────────────────────────────────────────────────
         // INTERNO
@@ -52,6 +62,28 @@ namespace IntegracionesSAP.Controllers.Inventory
                 try
                 {
                     response = service.CreateItem(document);
+                }
+                finally { service.Disconnect(); }
+                return Ok(response);
+            }
+            catch (Exception ex) { return Ok(response.Error(500, ex.Message)); }
+        }
+
+        private IActionResult UpdateItemInternal(OITM document, Func<ApiResponse> connectFn)
+        {
+            ApiResponse response = new ApiResponse();
+            try
+            {
+                if (document == null)
+                    return Ok(response.Error(400, "El artículo no puede ser nulo"));
+                if (string.IsNullOrWhiteSpace(document.ItemCode))
+                    return Ok(response.Error(400, "ItemCode es requerido"));
+
+                response = connectFn();
+                if (!response.Success) return Ok(response);
+                try
+                {
+                    response = service.UpdateItem(document);
                 }
                 finally { service.Disconnect(); }
                 return Ok(response);
