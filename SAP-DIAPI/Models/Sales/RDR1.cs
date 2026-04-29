@@ -10,6 +10,7 @@
         public double? Price { get; set; }
         public int? SysSerial { get; set; }
         public string? SerialNumber { get; set; }
+        public string TaxCode { get; set; } = "ISV";
 
         public List<UserField> UserFields { get; set; } = new();
 
