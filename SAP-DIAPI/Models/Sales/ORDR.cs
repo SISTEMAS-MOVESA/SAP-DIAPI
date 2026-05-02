@@ -5,7 +5,9 @@ namespace IntegracionesSAP.Models.Sales
     {
         public int? DocEntry { get; set; }
         public int? DocNum { get; set; }
+        public DateTime DocDate { get; set; } = DateTime.Now;
         public DateTime DocDueDate { get; set; } = DateTime.Now;
+        public DateTime TaxDate { get; set; } = DateTime.Now;
         public double? DocTotal { get; set; }
         public string? CardCode { get; set; }
         public string? CardName { get; set; }

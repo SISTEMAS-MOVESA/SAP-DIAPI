@@ -55,8 +55,8 @@ namespace IntegracionesSAP.Services.Sales
                 SAPobj.CardCode = obj.CardCode;
                 if (!string.IsNullOrEmpty(obj.CardName)) SAPobj.CardName = obj.CardName;
 
-                SAPobj.DocDate = DateTime.Now;
-                SAPobj.TaxDate = DateTime.Now;
+                SAPobj.DocDate = obj.DocDate;
+                SAPobj.TaxDate = obj.TaxDate;
                 SAPobj.DocDueDate = obj.DocDueDate;
                 if (obj.DocTotal != null) SAPobj.DocTotal = (double)obj.DocTotal;
                 

@@ -16,7 +16,7 @@ namespace IntegracionesSAP.Services.Inventory
 
         public ItemMasterDataService UseMovesa()
         {
-            _company = SAPConnection.GetMovesaTestCOM();
+            _company = SAPConnection.GetMovesaCOM();
             return this;
         }
 
