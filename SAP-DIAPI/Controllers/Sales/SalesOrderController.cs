@@ -201,7 +201,85 @@ namespace IntegracionesSAP.Controllers.Sales
             }
         }
 
-        [HttpGet("Invoice/PDF/{docEntry}")]
+        [HttpPost("Update/Header")]
+        public IActionResult UpdateSalesOrderHeader([FromBody] ORDR document)
+        {
+            ApiResponse response = new ApiResponse();
+            try
+            {
+                if (document?.DocEntry == null || document.DocEntry == 0)
+                    return Ok(response.Error(400, "Campo [DocEntry] es requerido."));
+
+                if (document.DiscPrcnt == null && document.DocTotal == null && string.IsNullOrEmpty(document.Comments))
+                    return Ok(response.Error(400, "Debe especificar al menos un campo a actualizar (DiscPrcnt, DocTotal o Comments)."));
+
+                response = service.Connect();
+                if (!response.Success) return Ok(response);
+
+                try { response = service.UpdateSalesOrderHeader(document); }
+                finally { service.Disconnect(); }
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return Ok(response.Error(500, ex.Message));
+            }
+        }
+
+        [HttpPost("Update/Line")]
+        public IActionResult UpdateSalesOrderLine([FromBody] ORDR document)
+        {
+            ApiResponse response = new ApiResponse();
+            try
+            {
+                if (document?.DocEntry == null || document.DocEntry == 0)
+                    return Ok(response.Error(400, "Campo [DocEntry] es requerido."));
+
+                if (document.Lines == null || !document.Lines.Any())
+                    return Ok(response.Error(400, "Debe especificar al menos una línea a actualizar."));
+
+                response = service.Connect();
+                if (!response.Success) return Ok(response);
+
+                try { response = service.UpdateSalesOrderLine(document); }
+                finally { service.Disconnect(); }
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return Ok(response.Error(500, ex.Message));
+            }
+        }
+
+        [HttpPost("Create/Line")]
+        public IActionResult CreateSalesOrderLine([FromBody] ORDR document)
+        {
+            ApiResponse response = new ApiResponse();
+            try
+            {
+                if (document?.DocEntry == null || document.DocEntry == 0)
+                    return Ok(response.Error(400, "Campo [DocEntry] es requerido."));
+
+                if (document.Lines == null || !document.Lines.Any())
+                    return Ok(response.Error(400, "Debe especificar al menos una línea a agregar."));
+
+                response = service.Connect();
+                if (!response.Success) return Ok(response);
+
+                try { response = service.CreateSalesOrderLine(document); }
+                finally { service.Disconnect(); }
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return Ok(response.Error(500, ex.Message));
+            }
+        }
+
+[HttpGet("Invoice/PDF/{docEntry}")]
         public IActionResult GetInvoicePdf(int docEntry)
         {
             ApiResponse response = new ApiResponse();

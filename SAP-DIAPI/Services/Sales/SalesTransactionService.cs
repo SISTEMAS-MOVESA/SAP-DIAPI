@@ -1,6 +1,7 @@
 ﻿using IntegracionesSAP.Libs;
 using IntegracionesSAP.Models;
 using IntegracionesSAP.Models.Sales;
+using Microsoft.IdentityModel.Tokens;
 using SAPbobsCOM;
 
 namespace IntegracionesSAP.Services.Sales
@@ -54,10 +55,12 @@ namespace IntegracionesSAP.Services.Sales
 
                 SAPobj.CardCode = obj.CardCode;
                 if (!string.IsNullOrEmpty(obj.CardName)) SAPobj.CardName = obj.CardName;
+                if (!string.IsNullOrEmpty(obj.NumAtCard)) SAPobj.NumAtCard = obj.NumAtCard;
 
                 SAPobj.DocDate = obj.DocDate;
                 SAPobj.TaxDate = obj.TaxDate;
                 SAPobj.DocDueDate = obj.DocDueDate;
+
                 if (obj.DocTotal != null) SAPobj.DocTotal = (double)obj.DocTotal;
                 
                 SAPobj.Series = obj.Series;
@@ -867,6 +870,179 @@ namespace IntegracionesSAP.Services.Sales
             catch (Exception ex)
             {
                 return response.Error(500, $"Error SAP OINV: {ex.Message}");
+            }
+            finally
+            {
+                if (SAPobj != null)
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(SAPobj);
+            }
+        }
+
+        /// <summary>
+        /// Actualiza el encabezado de una OV.
+        /// - DiscPrcnt: aplica el porcentaje de descuento directamente.
+        /// - DocTotal: calcula el DiscPrcnt necesario para alcanzar ese total deseado
+        ///   (útil cuando se conoce el monto final pero no el porcentaje).
+        /// - Comments: actualiza el comentario del documento.
+        /// </summary>
+        public ApiResponse UpdateSalesOrderHeader(ORDR obj)
+        {
+            ApiResponse response = new ApiResponse();
+            Documents SAPobj = null;
+            try
+            {
+                SAPobj = (Documents)_company.GetBusinessObject(BoObjectTypes.oOrders);
+
+                if (!SAPobj.GetByKey((int)obj.DocEntry))
+                    return response.Error(404, $"Orden [{obj.DocEntry}] no encontrada.");
+
+                if (obj.DiscPrcnt != null)
+                {
+                    SAPobj.DiscountPercent = (double)obj.DiscPrcnt;
+                }
+                else if (obj.DocTotal != null)
+                {
+                    //SAPobj.DocTotal = (double)obj.DocTotal;
+                    double currentTotal = SAPobj.DocTotal;
+                    double desiredTotal = (double)obj.DocTotal;
+                    if (currentTotal > 0 && desiredTotal < currentTotal)
+                        SAPobj.DiscountPercent = (currentTotal - desiredTotal) / currentTotal * 100.0;
+                }
+
+                if (!string.IsNullOrEmpty(obj.Comments))
+                    SAPobj.Comments = obj.Comments;
+
+                int ret = SAPobj.Update();
+                if (ret != 0)
+                {
+                    _company.GetLastError(out int errCode, out string errMsg);
+                    return response.Error(500, $"Error SAP ORDR Update/Header: {errCode} - {errMsg}");
+                }
+
+                return response.Ok(obj.DocEntry);
+            }
+            catch (Exception ex)
+            {
+                return response.Error(500, ex.Message);
+            }
+            finally
+            {
+                if (SAPobj != null)
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(SAPobj);
+            }
+        }
+
+        /// <summary>
+        /// Actualiza una o más líneas existentes en una OV (Price y/o DiscountPercent por LineNum).
+        /// </summary>
+        public ApiResponse UpdateSalesOrderLine(ORDR obj)
+        {
+            ApiResponse response = new ApiResponse();
+            Documents SAPobj = null;
+            try
+            {
+                SAPobj = (Documents)_company.GetBusinessObject(BoObjectTypes.oOrders);
+
+                if (!SAPobj.GetByKey((int)obj.DocEntry))
+                    return response.Error(404, $"Orden [{obj.DocEntry}] no encontrada.");
+
+                if (!string.IsNullOrEmpty(obj.Comments))
+                    SAPobj.Comments = obj.Comments;
+
+                foreach (var line in obj.Lines)
+                {
+                    bool found = false;
+                    for (int i = 0; i < SAPobj.Lines.Count; i++)
+                    {
+                        SAPobj.Lines.SetCurrentLine(i);
+                        if (SAPobj.Lines.LineNum == line.LineNum)
+                        {
+                            if (line.Price != null)
+                                SAPobj.Lines.Price = (double)line.Price;
+                            SAPobj.Lines.DiscountPercent = line.DiscountPercent;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found)
+                        return response.Error(404, $"Línea [{line.LineNum}] no encontrada en orden [{obj.DocEntry}].");
+                }
+
+                int ret = SAPobj.Update();
+                if (ret != 0)
+                {
+                    _company.GetLastError(out int errCode, out string errMsg);
+                    return response.Error(500, $"Error SAP ORDR Update/Line: {errCode} - {errMsg}");
+                }
+
+                return response.Ok(obj.DocEntry);
+            }
+            catch (Exception ex)
+            {
+                return response.Error(500, ex.Message);
+            }
+            finally
+            {
+                if (SAPobj != null)
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(SAPobj);
+            }
+        }
+
+        /// <summary>
+        /// Agrega una o más líneas nuevas a una OV existente.
+        /// El precio que llega debe ser SIN ISV — el TaxCode en la línea aplica el impuesto.
+        /// </summary>
+        public ApiResponse CreateSalesOrderLine(ORDR obj)
+        {
+            ApiResponse response = new ApiResponse();
+            Documents SAPobj = null;
+            try
+            {
+                SAPobj = (Documents)_company.GetBusinessObject(BoObjectTypes.oOrders);
+
+                if (!SAPobj.GetByKey((int)obj.DocEntry))
+                    return response.Error(404, $"Orden [{obj.DocEntry}] no encontrada.");
+
+                if (!string.IsNullOrEmpty(obj.Comments))
+                    SAPobj.Comments = obj.Comments;
+
+                foreach (var line in obj.Lines)
+                {
+                    SAPobj.Lines.SetCurrentLine(SAPobj.Lines.Count - 1);
+                    SAPobj.Lines.Add();
+
+                    SAPobj.Lines.ItemCode = line.ItemCode;
+                    SAPobj.Lines.Quantity = line.Quantity > 0 ? line.Quantity : 1;
+
+                    if (!string.IsNullOrEmpty(line.WhsCode))
+                        SAPobj.Lines.WarehouseCode = line.WhsCode;
+
+                    if (line.Price != null)
+                        SAPobj.Lines.UnitPrice = (double)line.Price;
+
+                    if (!string.IsNullOrEmpty(line.TaxCode))
+                        SAPobj.Lines.TaxCode = line.TaxCode;
+
+                    SAPobj.Lines.DiscountPercent = line.DiscountPercent;
+
+                    foreach (var UF in line.UserFields ?? [])
+                    {
+                        try { SAPobj.Lines.UserFields.Fields.Item(UF.Key).Value = UF.Value; } catch { }
+                    }
+                }
+
+                int ret = SAPobj.Update();
+                if (ret != 0)
+                {
+                    _company.GetLastError(out int errCode, out string errMsg);
+                    return response.Error(500, $"Error SAP ORDR Create/Line: {errCode} - {errMsg}");
+                }
+
+                return response.Ok(obj.DocEntry);
+            }
+            catch (Exception ex)
+            {
+                return response.Error(500, ex.Message);
             }
             finally
             {
