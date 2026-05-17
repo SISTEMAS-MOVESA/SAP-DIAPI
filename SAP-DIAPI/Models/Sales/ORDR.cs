@@ -8,7 +8,7 @@ namespace IntegracionesSAP.Models.Sales
         public DateTime DocDate { get; set; } = DateTime.Now;
         public DateTime DocDueDate { get; set; } = DateTime.Now;
         public DateTime TaxDate { get; set; } = DateTime.Now;
-        public string? NumAtCard { get; set; };
+        public string? NumAtCard { get; set; }
         public double? DocTotal { get; set; }
         public string? CardCode { get; set; }
         public string? CardName { get; set; }
