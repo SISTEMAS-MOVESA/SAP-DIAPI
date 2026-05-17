@@ -61,6 +61,7 @@ namespace IntegracionesSAP.Services.Sales
                 SAPobj.TaxDate = obj.TaxDate;
                 SAPobj.DocDueDate = obj.DocDueDate;
 
+                if (obj.PaymentGroupCode != null) SAPobj.PaymentGroupCode = (int)obj.PaymentGroupCode;
                 if (obj.DocTotal != null) SAPobj.DocTotal = (double)obj.DocTotal;
                 
                 SAPobj.Series = obj.Series;
