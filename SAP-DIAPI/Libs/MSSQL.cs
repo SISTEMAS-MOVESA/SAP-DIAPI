@@ -22,6 +22,15 @@ namespace IntegracionesSAP.Libs
             Server = "192.168.1.3", DataBase = "ABCOMPANY", UserName = "sa", Password = "M*l!n3r0s2k12"
         };
 
+        public static DBConnection DB_VEHICO = new DBConnection()
+        {
+            Server = "192.168.1.3",
+            DataBase = "VEHICO",
+            UserName = "sa",
+            Password = "M*l!n3r0s2k12"
+        };
+
+
         public static DBConnection DB_DEFAULT = MSSQL.DB_MOVESA;
 
         public static T ExecuteScalar<T>(DBConnection db, string query, Dictionary<string, object>? parameters)

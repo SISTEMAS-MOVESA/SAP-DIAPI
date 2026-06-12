@@ -10,10 +10,11 @@ namespace IntegracionesSAP.Models.Purchasing
     public class OPCH
     {
         public string? CardCode { get; set; }
+        public string? CardName { get; set; }
         public int? Series { get; set; }
         public DateTime DocDate { get; set; } = DateTime.Now;
         public DateTime DocDueDate { get; set; } = DateTime.Now;
-        public string DocCurrency { get; set; } = "USD";
+        public string DocCurrency { get; set; } = "";
         public BoDocumentTypes DocType { get; set; } = BoDocumentTypes.dDocument_Items;
         public string? Comments { get; set; }
         public string? NumAtCard { get; set; }

@@ -79,6 +79,31 @@ namespace IntegracionesSAP.Libs
             return _company;
 
         }
+
+        public static Company GetVehicoCOM()
+        {
+            DBConnection conn = MSSQL.DB_VEHICO;
+            if (_company != null && _company.Connected)
+                return _company;
+
+            _company = new Company
+            {
+                Server = conn.Server,
+                CompanyDB = conn.DataBase,
+                DbServerType = BoDataServerTypes.dst_MSSQL2012,
+                DbUserName = conn.UserName,
+                DbPassword = conn.Password,
+                UserName = _user,
+                Password = _password,
+                language = BoSuppLangs.ln_Spanish_La,
+                LicenseServer = "192.168.1.9",
+                SLDServer = "192.168.1.9:40000"
+            };
+
+            return _company;
+
+        }
+
         public static Company GetDefaultCOM()
         {
             return SAPConnection.GetMovesaCOM();

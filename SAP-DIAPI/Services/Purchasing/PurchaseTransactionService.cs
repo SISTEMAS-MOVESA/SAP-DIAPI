@@ -479,6 +479,8 @@ namespace IntegracionesSAP.Services.Purchasing
                 if (!string.IsNullOrEmpty(obj.DocCurrency))
                     doc.DocCurrency = obj.DocCurrency;
                 doc.Series = (int)obj.Series;
+                if (!string.IsNullOrEmpty(obj.CardName))
+                    doc.CardName = obj.CardName;
                 if (!string.IsNullOrEmpty(obj.NumAtCard))
                     doc.NumAtCard = obj.NumAtCard;
 
