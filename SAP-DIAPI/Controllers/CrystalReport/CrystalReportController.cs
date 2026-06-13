@@ -120,6 +120,22 @@ namespace IntegracionesSAP.Controllers
             }
         }
 
+        // Factura de proveedor
+        [HttpGet("SupplierInvoice/{docentry}")]
+        public async Task<IActionResult> SupplierInvoice(int docentry)
+        {
+            ApiResponse response = new ApiResponse();
+            try
+            {
+                response = await service.GetPDF(BuildRequest("PCH10007", docentry));
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return Ok(response.Error(500, ex.Message));
+            }
+        }
+
         // Nota de despacho
         [HttpGet("DispatchNote/{docentry}")]
         public async Task<IActionResult> DispatchNote(int docentry)
