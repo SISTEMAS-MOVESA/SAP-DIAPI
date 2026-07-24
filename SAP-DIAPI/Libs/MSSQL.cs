@@ -31,7 +31,7 @@ namespace IntegracionesSAP.Libs
         };
 
 
-        public static DBConnection DB_DEFAULT = MSSQL.DB_MOVESA;
+        public static DBConnection DB_DEFAULT = MSSQL.DB_VEHICO;
 
         public static T ExecuteScalar<T>(DBConnection db, string query, Dictionary<string, object>? parameters)
         {

@@ -227,6 +227,89 @@ namespace IntegracionesSAP.Services.Sales
             }
         }
 
+        // -- anulacion masiva de facturas de reserva via nota de credito
+        public ApiResponse CancelReserveInvoicesBulk(List<int> docEntries, string comments)
+        {
+            ApiResponse response = new ApiResponse();
+            var result = new Models.Sales.CancelBulkResult();
+
+            foreach (int docEntry in docEntries)
+            {
+                Documents invoice    = null;
+                Documents creditNote = null;
+                try
+                {
+                    invoice = (Documents)_company.GetBusinessObject(BoObjectTypes.oInvoices);
+
+                    if (!invoice.GetByKey(docEntry))
+                    {
+                        result.Failed.Add(new Models.Sales.CancelBulkItemResult
+                        {
+                            DocEntry = docEntry,
+                            Error = $"Factura [{docEntry}] no encontrada"
+                        });
+                        continue;
+                    }
+
+                    if (invoice.DocumentStatus == BoStatus.bost_Close)
+                    {
+                        result.Failed.Add(new Models.Sales.CancelBulkItemResult
+                        {
+                            DocEntry = docEntry,
+                            Error = "La factura ya está cerrada o cancelada (DocStatus = C)"
+                        });
+                        continue;
+                    }
+
+                    // Crear nota de crédito que referencie cada línea de la factura.
+                    // Cancel() no está soportado para oInvoices en este DI-API (-5006).
+                    creditNote = (Documents)_company.GetBusinessObject(BoObjectTypes.oCreditNotes);
+                    creditNote.CardCode = invoice.CardCode;
+                    creditNote.Comments = comments;
+
+                    int lineCount = invoice.Lines.Count;
+                    for (int i = 0; i < lineCount; i++)
+                    {
+                        invoice.Lines.SetCurrentLine(i);
+                        if (i > 0) creditNote.Lines.Add();
+                        creditNote.Lines.BaseEntry = docEntry;
+                        creditNote.Lines.BaseType  = (int)BoObjectTypes.oInvoices;
+                        creditNote.Lines.BaseLine  = invoice.Lines.LineNum;
+                    }
+
+                    int ret = creditNote.Add();
+                    if (ret != 0)
+                    {
+                        _company.GetLastError(out int errCode, out string errMsg);
+                        result.Failed.Add(new Models.Sales.CancelBulkItemResult
+                        {
+                            DocEntry = docEntry,
+                            Error = $"{errCode} - {errMsg}"
+                        });
+                        continue;
+                    }
+
+                    result.Succeeded.Add(new Models.Sales.CancelBulkItemResult { DocEntry = docEntry });
+                }
+                catch (Exception ex)
+                {
+                    result.Failed.Add(new Models.Sales.CancelBulkItemResult
+                    {
+                        DocEntry = docEntry,
+                        Error = ex.Message
+                    });
+                }
+                finally
+                {
+                    if (invoice    != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(invoice);
+                    if (creditNote != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(creditNote);
+                }
+            }
+
+            return response.Ok(result,
+                $"Procesadas {docEntries.Count}: {result.Succeeded.Count} exitosas, {result.Failed.Count} fallidas");
+        }
+
         public ApiResponse CopyOrderToDelivery(ORDR obj)
         {
             ApiResponse response = new ApiResponse();
