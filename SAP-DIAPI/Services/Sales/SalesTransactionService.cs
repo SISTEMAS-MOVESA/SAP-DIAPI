@@ -86,7 +86,7 @@ namespace IntegracionesSAP.Services.Sales
                     SAPobj.Lines.Quantity = item.Quantity;
                     SAPobj.Lines.WarehouseCode = item.WhsCode;
 
-                    if (item.Price != null) SAPobj.Lines.Price = (double)item.Price;
+                    if (item.Price != null) SAPobj.Lines.UnitPrice = (double)item.Price;
                     if (item.TaxCode != null) SAPobj.Lines.TaxCode = item.TaxCode;
                     if (item.DiscountPercent != null) SAPobj.Lines.DiscountPercent = (double)item.DiscountPercent;
                     //SAPobj.Lines.DiscountPercent = (double)item.DiscountPercent;
