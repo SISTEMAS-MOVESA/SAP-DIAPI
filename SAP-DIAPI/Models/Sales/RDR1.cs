@@ -6,7 +6,7 @@
         public string? ItemCode { get; set; }
         public string? WhsCode { get; set; }
         public double Quantity { get; set; } = 0;
-        public double DiscountPercent { get; set; } = 0;
+        public double? DiscountPercent { get; set; }
         public double? Price { get; set; }
         public int? SysSerial { get; set; }
         public string? SerialNumber { get; set; }

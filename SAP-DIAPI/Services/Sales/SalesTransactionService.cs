@@ -88,7 +88,8 @@ namespace IntegracionesSAP.Services.Sales
 
                     if (item.Price != null) SAPobj.Lines.Price = (double)item.Price;
                     if (item.TaxCode != null) SAPobj.Lines.TaxCode = item.TaxCode;
-                    SAPobj.Lines.DiscountPercent = (double)item.DiscountPercent;
+                    if (item.DiscountPercent != null) SAPobj.Lines.DiscountPercent = (double)item.DiscountPercent;
+                    //SAPobj.Lines.DiscountPercent = (double)item.DiscountPercent;
 
                     if (!string.IsNullOrEmpty(item.SerialNumber))
                     {
@@ -958,9 +959,8 @@ namespace IntegracionesSAP.Services.Sales
                         SAPobj.Lines.SetCurrentLine(i);
                         if (SAPobj.Lines.LineNum == line.LineNum)
                         {
-                            if (line.Price != null)
-                                SAPobj.Lines.Price = (double)line.Price;
-                            SAPobj.Lines.DiscountPercent = line.DiscountPercent;
+                            if (line.Price != null) SAPobj.Lines.Price = (double)line.Price;
+                            if (line.DiscountPercent != null) SAPobj.Lines.DiscountPercent = (double)line.DiscountPercent;
                             found = true;
                             break;
                         }
@@ -1024,7 +1024,7 @@ namespace IntegracionesSAP.Services.Sales
                     if (!string.IsNullOrEmpty(line.TaxCode))
                         SAPobj.Lines.TaxCode = line.TaxCode;
 
-                    SAPobj.Lines.DiscountPercent = line.DiscountPercent;
+                    if (line.DiscountPercent != null) SAPobj.Lines.DiscountPercent = (double)line.DiscountPercent;
 
                     foreach (var UF in line.UserFields ?? [])
                     {
