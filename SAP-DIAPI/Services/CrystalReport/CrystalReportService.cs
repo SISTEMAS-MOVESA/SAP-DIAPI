@@ -1,3 +1,4 @@
+using IntegracionesSAP.Libs;
 using IntegracionesSAP.Models;
 using IntegracionesSAP.Models.CrystalReport;
 using System.Text;
@@ -40,6 +41,19 @@ namespace IntegracionesSAP.Services.CrystalReport
             {
                 return response.Error(500, ex.Message);
             }
+        }
+
+        public void SetInvoicePrinted(int docEntry, string printed)
+        {
+            MSSQL.ExecuteNonQuery(
+                MSSQL.DB_MOVESA,
+                "UPDATE MOVESA..OINV SET PRINTED = @Printed WHERE DOCENTRY = @DocEntry",
+                new Dictionary<string, object>
+                {
+                    { "@Printed", printed },
+                    { "@DocEntry", docEntry }
+                }
+            );
         }
     }
 }
