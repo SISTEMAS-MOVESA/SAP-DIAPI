@@ -14,5 +14,7 @@ namespace IntegracionesSAP.Models.Inventory
 
         public int? SysSerial { get; set; }
         public string? SerialNumber { get; set; }
+
+        public List<UserField> UserFields { get; set; } = new List<UserField>();
     }
 }

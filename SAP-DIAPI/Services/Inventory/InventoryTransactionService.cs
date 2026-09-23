@@ -94,6 +94,12 @@ namespace IntegracionesSAP.Services.Inventory
                         }
                     }
 
+                    foreach (var UF in item.UserFields ?? [])
+                    {
+                        try { SAPobj.Lines.UserFields.Fields.Item(UF.Key).Value = UF.Value; }
+                        catch { }
+                    }
+
                     SAPobj.Lines.Add();
 
                 }
@@ -182,6 +188,12 @@ namespace IntegracionesSAP.Services.Inventory
                             SAPobj.Lines.SerialNumbers.SystemSerialNumber = (int)item.SysSerial;
                             SAPobj.Lines.SerialNumbers.Add();
                         }
+                    }
+
+                    foreach (var UF in item.UserFields ?? [])
+                    {
+                        try { SAPobj.Lines.UserFields.Fields.Item(UF.Key).Value = UF.Value; }
+                        catch { }
                     }
 
                     SAPobj.Lines.Add();
