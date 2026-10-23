@@ -269,6 +269,7 @@ namespace IntegracionesSAP.Services.Inventory
                         Quantity = item.Quantity,
                         SysSerial = item.SysSerial,
                         SerialNumber = item.SerialNumber,
+                        UserFields = item.UserFields,
                     });
                     LineNum++;
                 }
