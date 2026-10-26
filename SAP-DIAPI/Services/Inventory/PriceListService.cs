@@ -8,19 +8,16 @@ namespace IntegracionesSAP.Services.Inventory
 {
     public class PriceListService
     {
-        private readonly Company _company;
-
-        public PriceListService()
-        {
-            _company = SAPConnection.GetMovesaCOM();
-        }
+        // Se lee al usarse: es la compania que conecto esta peticion dentro de su turno.
+        private Company _company => SAPConnection.Actual;
 
         public ApiResponse Connect()
         {
             ApiResponse response = new ApiResponse();
             try
             {
-                SAPConnection.Connect();
+                // Listas de precios siempre en MOVESA, como antes.
+                SAPConnection.Connect(SAPConnection.GetMovesaCOM);
                 return response.Ok(null, "Conectado a SAP");
             }
             catch (Exception ex)

@@ -8,12 +8,8 @@ namespace IntegracionesSAP.Services.Sales
 {
     public class SalesTransactionService
     {
-        private Company _company;
-
-        public SalesTransactionService()
-        {
-            _company = SAPConnection.GetDefaultCOM();
-        }
+        // Se lee al usarse: es la compania que conecto esta peticion dentro de su turno.
+        private Company _company => SAPConnection.Actual;
 
         public ApiResponse Connect()
         {

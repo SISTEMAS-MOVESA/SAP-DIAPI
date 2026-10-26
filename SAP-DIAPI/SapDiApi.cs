@@ -1,4 +1,5 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using IntegracionesSAP.Libs;
+using Microsoft.Data.SqlClient;
 using SAPbobsCOM;
 
 namespace IntegracionesSAP
@@ -11,29 +12,39 @@ namespace IntegracionesSAP
         /// </summary>
         public static void ConnectVehico()
         {
+            // Mismo turno que SAPConnection: una sola operacion DI API a la vez en toda la API.
+            SAPConnection.TomarTurno();
 
-            if (_company != null && _company.Connected)
-                return;
-
-            _company = new Company
+            try
             {
-                Server = "192.168.1.3",
-                DbServerType = BoDataServerTypes.dst_MSSQL2012,
-                CompanyDB = "VEHICO",
-                UserName = "itpro",
-                Password = "eeal96",
-                language = BoSuppLangs.ln_Spanish_La,
-                UseTrusted = false,
-                DbUserName = "SA",
-                DbPassword = "M*l!n3r0s2k12",
-                SLDServer = "192.168.1.9:40000"
-            };
+                if (_company != null && _company.Connected)
+                    return;
 
-            int errorCode = _company.Connect();
-            if (errorCode != 0)
+                _company = new Company
+                {
+                    Server = "192.168.1.3",
+                    DbServerType = BoDataServerTypes.dst_MSSQL2012,
+                    CompanyDB = "VEHICO",
+                    UserName = "itpro",
+                    Password = "eeal96",
+                    language = BoSuppLangs.ln_Spanish_La,
+                    UseTrusted = false,
+                    DbUserName = "SA",
+                    DbPassword = "M*l!n3r0s2k12",
+                    SLDServer = "192.168.1.9:40000"
+                };
+
+                int errorCode = _company.Connect();
+                if (errorCode != 0)
+                {
+                    _company.GetLastError(out int errCode, out string errMsg);
+                    throw new Exception($"Error al conectar a SAP B1: {errCode} - {errMsg}");
+                }
+            }
+            catch
             {
-                _company.GetLastError(out int errCode, out string errMsg);
-                throw new Exception($"Error al conectar a SAP B1: {errCode} - {errMsg}");
+                SAPConnection.SoltarTurno();
+                throw;
             }
         }
 
@@ -42,23 +53,30 @@ namespace IntegracionesSAP
         /// </sumary>
         public static void DisconnectVehico()
         {
-            if (_company != null)
+            try
             {
-                try
+                if (_company != null)
                 {
-                    if (_company.Connected)
+                    try
                     {
-                        _company.Disconnect();
+                        if (_company.Connected)
+                        {
+                            _company.Disconnect();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new Exception($"Error al desconectar de SAP B1: {ex.Message}");
+                    }
+                    finally
+                    {
+                        _company = null;
                     }
                 }
-                catch (Exception ex)
-                {
-                    throw new Exception($"Error al desconectar de SAP B1: {ex.Message}");
-                }
-                finally
-                {
-                    _company = null;
-                }
+            }
+            finally
+            {
+                SAPConnection.SoltarTurno();
             }
         }
 
@@ -67,28 +85,39 @@ namespace IntegracionesSAP
         /// </summary>
         public static void Connect()
         {
-            if (_company != null && _company.Connected)
-                return;
+            // Mismo turno que SAPConnection: una sola operacion DI API a la vez en toda la API.
+            SAPConnection.TomarTurno();
 
-            _company = new Company
+            try
             {
-                Server = "192.168.1.3",
-                DbServerType = BoDataServerTypes.dst_MSSQL2012,
-                CompanyDB = "MOVESA",
-                UserName = "it",
-                Password = "polar",
-                language = BoSuppLangs.ln_Spanish_La,
-                UseTrusted = false,
-                DbUserName = "SA",
-                DbPassword = "M*l!n3r0s2k12",
-                SLDServer = "192.168.1.9:40000"
-            };
+                if (_company != null && _company.Connected)
+                    return;
 
-            int errorCode = _company.Connect();
-            if (errorCode != 0)
+                _company = new Company
+                {
+                    Server = "192.168.1.3",
+                    DbServerType = BoDataServerTypes.dst_MSSQL2012,
+                    CompanyDB = "MOVESA",
+                    UserName = "it",
+                    Password = "polar",
+                    language = BoSuppLangs.ln_Spanish_La,
+                    UseTrusted = false,
+                    DbUserName = "SA",
+                    DbPassword = "M*l!n3r0s2k12",
+                    SLDServer = "192.168.1.9:40000"
+                };
+
+                int errorCode = _company.Connect();
+                if (errorCode != 0)
+                {
+                    _company.GetLastError(out int errCode, out string errMsg);
+                    throw new Exception($"Error al conectar a SAP B1: {errCode} - {errMsg}");
+                }
+            }
+            catch
             {
-                _company.GetLastError(out int errCode, out string errMsg);
-                throw new Exception($"Error al conectar a SAP B1: {errCode} - {errMsg}");
+                SAPConnection.SoltarTurno();
+                throw;
             }
         }
 
@@ -97,23 +126,30 @@ namespace IntegracionesSAP
         /// </sumary>
         public static void Disconnect()
         {
-            if (_company != null)
+            try
             {
-                try
+                if (_company != null)
                 {
-                    if (_company.Connected)
+                    try
                     {
-                        _company.Disconnect();
+                        if (_company.Connected)
+                        {
+                            _company.Disconnect();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new Exception($"Error al desconectar de SAP B1: {ex.Message}");
+                    }
+                    finally
+                    {
+                        _company = null;
                     }
                 }
-                catch (Exception ex)
-                {
-                    throw new Exception($"Error al desconectar de SAP B1: {ex.Message}");
-                }
-                finally
-                {
-                    _company = null;
-                }
+            }
+            finally
+            {
+                SAPConnection.SoltarTurno();
             }
         }
 

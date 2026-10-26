@@ -17,15 +17,24 @@ namespace IntegracionesSAP.Controllers
             try
             {
                 //var db = MSSQL.DB_DEFAULT;
-                var con = SAPConnection.GetDefaultCOM();
-                response.Ok(new
+                // GetDefaultCOM crea la compania compartida: dentro del turno para no pisar la de otra peticion.
+                SAPConnection.TomarTurno();
+                try
                 {
-                    Server = con.Server,
-                    CompanyDB = con.CompanyDB,
-                    UserName = con.UserName,
-                    LicenseServer = con.LicenseServer,
-                    SLDServer = con.SLDServer
-                });
+                    var con = SAPConnection.GetDefaultCOM();
+                    response.Ok(new
+                    {
+                        Server = con.Server,
+                        CompanyDB = con.CompanyDB,
+                        UserName = con.UserName,
+                        LicenseServer = con.LicenseServer,
+                        SLDServer = con.SLDServer
+                    });
+                }
+                finally
+                {
+                    SAPConnection.Disconnect();
+                }
 
                 return Ok(response);
             }

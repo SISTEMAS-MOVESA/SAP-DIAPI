@@ -17,12 +17,8 @@ namespace IntegracionesSAP.Services.Purchasing
     /// </summary>
     public class PurchaseTransactionService
     {
-        private Company _company;
-
-        public PurchaseTransactionService()
-        {
-            _company = SAPConnection.GetDefaultCOM();
-        }
+        // Se lee al usarse: es la compania que conecto esta peticion dentro de su turno.
+        private Company _company => SAPConnection.Actual;
 
         public ApiResponse Connect()
         {

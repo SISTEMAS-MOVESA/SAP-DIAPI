@@ -7,6 +7,13 @@ namespace IntegracionesSAP.Libs
     public class SAPConnection
     {
         private static Company _company;
+
+        // Turno unico para usar DI API: _company es compartido por todas las peticiones, asi que
+        // solo una operacion a la vez puede conectar, crear documentos y desconectar.
+        private static readonly SemaphoreSlim _turno = new SemaphoreSlim(1, 1);
+        private static readonly AsyncLocal<int> _turnosTomados = new AsyncLocal<int>();
+        private static readonly TimeSpan _esperaMaximaTurno = TimeSpan.FromSeconds(90);
+
         private static string _user = "it";
         private static string _password = "polar";
         
@@ -109,13 +116,58 @@ namespace IntegracionesSAP.Libs
             return SAPConnection.GetMovesaTestCOM();
         }
         
+        /// <summary>
+        /// Compania conectada por la peticion que tiene el turno.
+        /// </summary>
+        public static Company Actual => _company;
+
+        /// <summary>
+        /// Espera el turno de DI API (maximo 90 s). Es reentrante: si la misma peticion ya lo tiene, no vuelve a esperar.
+        /// </summary>
+        public static void TomarTurno()
+        {
+            if (_turnosTomados.Value > 0)
+            {
+                _turnosTomados.Value++;
+                return;
+            }
+
+            if (!_turno.Wait(_esperaMaximaTurno))
+                throw new Exception($"SAP-DIAPI ocupado: otra operacion lleva mas de {_esperaMaximaTurno.TotalSeconds} segundos usando SAP. Intente de nuevo.");
+
+            _turnosTomados.Value = 1;
+        }
+
+        /// <summary>
+        /// Suelta el turno solo si esta peticion lo tiene, para que un Disconnect sin Connect previo no libere el turno de otra.
+        /// </summary>
+        public static void SoltarTurno()
+        {
+            if (_turnosTomados.Value == 0)
+                return;
+
+            _turnosTomados.Value--;
+            if (_turnosTomados.Value == 0)
+                _turno.Release();
+        }
+
         public static void Connect()
         {
-            if (_company == null)
-                GetDefaultCOM();
+            Connect(GetDefaultCOM);
+        }
+
+        /// <summary>
+        /// Toma el turno y conecta a la compania indicada. La compania se elige dentro del turno
+        /// para que otra peticion no la cambie mientras esta conectando.
+        /// </summary>
+        public static void Connect(Func<Company> seleccionarCompania)
+        {
+            TomarTurno();
 
             try
             {
+                seleccionarCompania();
+
                 if (!_company.Connected)
                 {
                     int result = _company.Connect();
@@ -129,32 +181,40 @@ namespace IntegracionesSAP.Libs
             }
             catch (Exception ex)
             {
+                SoltarTurno();
                 throw new Exception($"Error SAPConnection.Connect(): {ex.Message}");
             }
         }
         public static void Disconnect()
         {
-            if (_company != null)
+            try
             {
-                try
+                if (_company != null)
                 {
-                    if (_company.Connected)
+                    try
                     {
-                        _company.Disconnect();
+                        if (_company.Connected)
+                        {
+                            _company.Disconnect();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new Exception($"Error SAPConnection.Disconnect(): {ex.Message}");
+                    }
+                    finally
+                    {
+                        if (_company != null)
+                        {
+                            Marshal.ReleaseComObject(_company);
+                            _company = null;
+                        }
                     }
                 }
-                catch (Exception ex)
-                {
-                    throw new Exception($"Error SAPConnection.Disconnect(): {ex.Message}");
-                }
-                finally
-                {
-                    if (_company != null)
-                    {
-                        Marshal.ReleaseComObject(_company);
-                        _company = null;
-                    }
-                }
+            }
+            finally
+            {
+                SoltarTurno();
             }
         }
     

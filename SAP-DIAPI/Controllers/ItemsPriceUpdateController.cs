@@ -36,6 +36,11 @@ namespace IntegracionesSAP.Controllers
                     title: "Error inesperado en ItemsPriceUpdateController"
                 );
             }
+            finally
+            {
+                // Sin esto la conexion quedaba abierta y, con el turno, bloquearia a las demas peticiones.
+                SapDiApi.Disconnect();
+            }
         }
     }
 }
