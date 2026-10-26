@@ -7,22 +7,21 @@ namespace IntegracionesSAP.Services.Inventory
 {
     public class ItemMasterDataService
     {
-        private Company _company;
+        // Se lee al usarse: es la compania que conecto esta peticion dentro de su turno.
+        private Company _company => SAPConnection.Actual;
 
-        public ItemMasterDataService()
-        {
-            _company = SAPConnection.GetDefaultCOM();
-        }
+        // UseMovesa/UseABCompany solo eligen la compania; se crea al conectar, dentro del turno.
+        private Func<Company> _seleccionarCompania = SAPConnection.GetDefaultCOM;
 
         public ItemMasterDataService UseMovesa()
         {
-            _company = SAPConnection.GetMovesaCOM();
+            _seleccionarCompania = SAPConnection.GetMovesaCOM;
             return this;
         }
 
         public ItemMasterDataService UseABCompany()
         {
-            _company = SAPConnection.GetABCompanyCOM();
+            _seleccionarCompania = SAPConnection.GetABCompanyCOM;
             return this;
         }
 
@@ -31,7 +30,7 @@ namespace IntegracionesSAP.Services.Inventory
             ApiResponse response = new ApiResponse();
             try
             {
-                SAPConnection.Connect();
+                SAPConnection.Connect(_seleccionarCompania);
                 return response.Ok();
             }
             catch (Exception ex) { return response.Error(500, ex.Message); }

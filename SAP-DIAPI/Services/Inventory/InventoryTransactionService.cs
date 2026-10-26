@@ -9,12 +9,8 @@ namespace IntegracionesSAP.Services.Inventory
 {
     public class InventoryTransactionService
     {
-        private Company _company;
-
-        public InventoryTransactionService()
-        {
-            _company = SAPConnection.GetDefaultCOM();
-        }
+        // Se lee al usarse: es la compania que conecto esta peticion dentro de su turno.
+        private Company _company => SAPConnection.Actual;
 
         public ApiResponse Connect()
         {

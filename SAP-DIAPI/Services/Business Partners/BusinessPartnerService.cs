@@ -10,12 +10,8 @@ namespace IntegracionesSAP.Services.Business_Partners
 {
     public class BusinessPartnerService
     {
-        private Company _company;
-
-        public BusinessPartnerService()
-        {
-            _company = SAPConnection.GetDefaultCOM();
-        }
+        // Se lee al usarse: es la compania que conecto esta peticion dentro de su turno.
+        private Company _company => SAPConnection.Actual;
 
         public ApiResponse Connect()
         {
